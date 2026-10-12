@@ -24,14 +24,16 @@ import java.util.stream.Collectors;
  */
 public class MarkerGUI implements Listener {
     private static final MiniMessage MM = MiniMessage.miniMessage();
-    private static final String GUI_TITLE_RAW = "<gold>BlueMap Markers";
+    private static final String GUI_TITLE = "Awepeeps-BlueMap-Compass";
+    private static final String GUI_TITLE_RAW = "<gold>" + GUI_TITLE;
     private static final int INVENTORY_SIZE = 54;
     private static final int PAGE_SIZE = 45;
-    private static final int SLOT_CATEGORY = 45;
-    private static final int SLOT_OWNER_FILTER = 46;
-    private static final int SLOT_PREV = 48;
-    private static final int SLOT_TRACK_TOGGLE = 49;
-    private static final int SLOT_NEXT = 50;
+    private static final int SLOT_OWNER_FILTER = 45;
+    private static final int SLOT_CATEGORY = 46;
+    private static final int SLOT_TRACK_TOGGLE = 47;
+    private static final int SLOT_PREV = 49;
+    private static final int SLOT_PAGE_STATUS = 50;
+    private static final int SLOT_NEXT = 51;
     private static final int SLOT_CLOSE = 53;
     private static final Material CATEGORY_ICON = Material.BOOK;
     private static final NamespacedKey MARKER_ID_KEY = new NamespacedKey("bluemapcompass", "marker_id");
@@ -123,10 +125,15 @@ public class MarkerGUI implements Listener {
         List<MarkerData> allMarkers = getVisibleMarkers(player);
         String groupId = state.groupIds().get(state.groupIndex());
         List<MarkerData> groupMarkers = allMarkers.stream().filter(m -> m.groupId().equals(groupId)).toList();
-        int start = state.page() * PAGE_SIZE;
+        int pageCount = Math.max(1, (groupMarkers.size() + PAGE_SIZE - 1) / PAGE_SIZE);
+        int page = Math.min(state.page(), pageCount - 1);
+        if (page != state.page()) {
+            state = state.withPage(page);
+            savePlayerGuiState(player, state);
+        }
+        int start = page * PAGE_SIZE;
         int end = Math.min(start + PAGE_SIZE, groupMarkers.size());
-        String titleRaw = GUI_TITLE_RAW + " <gray>- <yellow>" + groupId;
-        Inventory gui = Bukkit.createInventory(null, INVENTORY_SIZE, MM.deserialize(titleRaw));
+        Inventory gui = Bukkit.createInventory(null, INVENTORY_SIZE, MM.deserialize(GUI_TITLE_RAW));
         if (groupMarkers.isEmpty()) {
             gui.setItem(22, createButton(Material.PAPER, MM.deserialize("<yellow>No waypoints yet"),
                     List.of(MM.deserialize("<gray>Sneak + right-click a lodestone or banner"),
@@ -147,12 +154,14 @@ public class MarkerGUI implements Listener {
         if (end < groupMarkers.size()) {
             gui.setItem(SLOT_NEXT, createButton(Material.ARROW, MM.deserialize("<green>Next Page")));
         }
+        gui.setItem(SLOT_PAGE_STATUS, createButton(Material.PAPER,
+                MM.deserialize("<yellow>Page " + (page + 1) + " of " + pageCount)));
         boolean allTracked = !allMarkers.isEmpty() && allMarkers.stream()
                 .allMatch(marker -> WaypointManager.getTrackedMarkers(player).contains(marker.id()));
         gui.setItem(SLOT_TRACK_TOGGLE, createButton(
                 allTracked ? Material.RED_DYE : Material.LIME_DYE,
                 MM.deserialize(allTracked ? "<red>Untrack All Shown" : "<green>Track All Shown"),
-                List.of(MM.deserialize("<gray>Applies to the current waypoint filter."))));
+                List.of(MM.deserialize("<gray>Applies to the current visibility filter."))));
         gui.setItem(SLOT_CLOSE, createButton(Material.BARRIER, MM.deserialize("<red>Close")));
         player.openInventory(gui);
     }
@@ -267,7 +276,7 @@ public class MarkerGUI implements Listener {
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
-        if (!event.getView().getTitle().contains("BlueMap Markers")) return;
+        if (!event.getView().getTitle().contains(GUI_TITLE)) return;
         event.setCancelled(true);
         if (event.getClickedInventory() != event.getView().getTopInventory()) return;
         player.updateInventory();

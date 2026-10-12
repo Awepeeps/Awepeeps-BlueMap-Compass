@@ -28,7 +28,7 @@ Lodestone waypoint pillars and labels use a warm amber/gold accent; the BlueMap
 lodestone icon uses a matching shaded gold lens. Banner waypoints keep their
 banner-color pillar and label.
 
-The output is `build/libs/awepeeps-bluemap-compass-1.4.1-awepeeps.7.jar`.
+The output is `build/libs/awepeeps-bluemap-compass-1.4.1-awepeeps.8.jar`.
 
 ## Basic in-game acceptance
 
@@ -41,3 +41,9 @@ The output is `build/libs/awepeeps-bluemap-compass-1.4.1-awepeeps.7.jar`.
    between tracking or untracking all waypoints in the selected visibility scope.
 7. Select the marker again to stop tracking, or use the GUI track toggle.
 8. Confirm marker creation and selection never teleport the player.
+
+The waypoint menu is titled **Awepeeps-BlueMap-Compass**. It shows up to 45
+waypoints per page; use the previous/next arrows and page counter in the bottom
+row to navigate. Visibility and category controls are grouped on the left,
+bulk tracking is beside them, and page navigation and close are grouped on the
+right.
