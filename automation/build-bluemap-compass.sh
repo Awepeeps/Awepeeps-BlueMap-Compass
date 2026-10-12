@@ -27,7 +27,7 @@ docker run --rm --platform linux/amd64 \
     while IFS= read -r -d "" script; do
       tr -d "$cr" < "$script" > "$script.lf"
       mv -- "$script.lf" "$script"
-    done < <(find /build/source -type f \( -name "*.sh" -o -name gradlew \) -print0)
+    done < <(find /build/source -type f \( -name "*.sh" -o -name gradlew -o -name "*.yml" -o -name "*.yaml" -o -name "*.svg" \) -print0)
     cd /build/source
     bash ./gradlew --no-daemon clean build
     install -D -m 0644 "build/libs/awepeeps-bluemap-compass-'"$VERSION"'.jar" \
