@@ -2,7 +2,7 @@
 
 Maintained fork of [MidnightTale/BlueMap-Compass](https://github.com/MidnightTale/BlueMap-Compass), prepared for the Awepeeps Paper 26.3 test server.
 
-Sneak-right-click a lodestone or banner with any compass (ordinary, lodestone, or recovery) to create a waypoint at that block, or remove its waypoint if one already exists. Sneak-right-click another block with a compass to open the waypoint menu; sneak-right-click air also opens the menu. Regular right-clicking air does nothing. Rename the compass in an anvil first to choose the waypoint's label; otherwise it uses the block type and coordinates. The waypoint is published on BlueMap and stored by the plugin. In-game waypoint indicators appear only while any compass is held and within the configured maximum distance; no compass durability is consumed, and selecting a marker does **not** teleport the player.
+Sneak-right-click a lodestone or banner with any compass (ordinary, lodestone, or recovery) to create a waypoint at that block, automatically track it for yourself, or remove its waypoint if one already exists. Sneak-right-click another block with a compass to open the waypoint menu; sneak-right-click air also opens the menu. Regular right-clicking air does nothing. Rename the compass in an anvil first to choose the waypoint's label; otherwise it uses the block type and coordinates. The waypoint is published on BlueMap and stored by the plugin. In-game waypoint indicators appear only while any compass is held and within the configured maximum distance; no compass durability is consumed, and selecting a marker does **not** teleport the player.
 
 ## Requirements
 
@@ -28,7 +28,7 @@ Lodestone waypoint pillars and labels use a warm amber/gold accent; the BlueMap
 lodestone icon uses a matching shaded gold lens. Banner waypoints keep their
 banner-color pillar and label.
 
-The output is `build/libs/awepeeps-bluemap-compass-1.4.1-awepeeps.6.jar`.
+The output is `build/libs/awepeeps-bluemap-compass-1.4.1-awepeeps.7.jar`.
 
 ## Basic in-game acceptance
 

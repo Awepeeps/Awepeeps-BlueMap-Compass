@@ -39,6 +39,10 @@ public class BannerMarkerListener implements Listener {
                 worldName, location.getBlockX(), location.getBlockY(), location.getBlockZ(),
                 name, type, color, markerId, player.getUniqueId().toString(), player.getName());
         addBlueMapMarker(location, name, type, color, markerId, player.getName());
+        WaypointManager.addTrackedWaypoint(player, new MarkerData(
+                markerId, name, type, worldName, location.getBlockX(), location.getBlockY(),
+                location.getBlockZ(), MARKER_SET_ID, player.getName(),
+                player.getUniqueId().toString(), color), BlueMapCompass.instance);
         player.sendMessage(net.kyori.adventure.text.Component.text("Waypoint created: " + name));
     }
 
