@@ -70,12 +70,12 @@ public class BannerMarkerListener implements Listener {
                         })));
     }
 
-    private void handleMarkerRemove(Block block) {
+    public List<BannerMarkerStorage.BannerMarkerData> removeMarkerAt(Block block) {
         String worldName = block.getWorld().getName();
         List<BannerMarkerStorage.BannerMarkerData> removed =
                 BlueMapCompass.instance.bannerMarkerStorage.removeMarkerByLocation(
                         worldName, block.getX(), block.getY(), block.getZ());
-        if (removed.isEmpty()) return;
+        if (removed.isEmpty()) return removed;
 
         BlueMapAPI.getInstance().ifPresent(api ->
                 api.getWorld(block.getWorld().getUID()).ifPresent(world ->
@@ -91,46 +91,47 @@ public class BannerMarkerListener implements Listener {
                 WaypointManager.removeWaypoint(player, marker.markerId);
             }
         }
+        return removed;
     }
 
     @EventHandler
     public void onBlockBreak(BlockBreakEvent event) {
-        handleMarkerRemove(event.getBlock());
+        removeMarkerAt(event.getBlock());
     }
 
     @EventHandler
     public void onBlockExplode(BlockExplodeEvent event) {
-        event.blockList().forEach(this::handleMarkerRemove);
+        event.blockList().forEach(this::removeMarkerAt);
     }
 
     @EventHandler
     public void onEntityExplode(EntityExplodeEvent event) {
-        event.blockList().forEach(this::handleMarkerRemove);
+        event.blockList().forEach(this::removeMarkerAt);
     }
 
     @EventHandler
     public void onBlockBurn(BlockBurnEvent event) {
-        handleMarkerRemove(event.getBlock());
+        removeMarkerAt(event.getBlock());
     }
 
     @EventHandler
     public void onBlockFromTo(BlockFromToEvent event) {
-        handleMarkerRemove(event.getToBlock());
+        removeMarkerAt(event.getToBlock());
     }
 
     @EventHandler
     public void onBlockFade(BlockFadeEvent event) {
-        handleMarkerRemove(event.getBlock());
+        removeMarkerAt(event.getBlock());
     }
 
     @EventHandler
     public void onBlockPistonExtend(BlockPistonExtendEvent event) {
-        event.getBlocks().forEach(this::handleMarkerRemove);
+        event.getBlocks().forEach(this::removeMarkerAt);
     }
 
     @EventHandler
     public void onBlockPistonRetract(BlockPistonRetractEvent event) {
-        event.getBlocks().forEach(this::handleMarkerRemove);
+        event.getBlocks().forEach(this::removeMarkerAt);
     }
 
     public void restoreAllMarkers() {

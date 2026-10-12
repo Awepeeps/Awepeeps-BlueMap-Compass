@@ -2,7 +2,7 @@
 
 Maintained fork of [MidnightTale/BlueMap-Compass](https://github.com/MidnightTale/BlueMap-Compass), prepared for the Awepeeps Paper 26.3 test server.
 
-Sneak-right-click a lodestone or banner with any compass (ordinary, lodestone, or recovery) to create a waypoint at that block. Sneak-right-click air with any compass to browse waypoints and select one to track or untrack it; regular right-clicking air does nothing. Rename the compass in an anvil first to choose the waypoint's label; otherwise it uses the block type and coordinates. The waypoint is published on BlueMap and stored by the plugin. In-game waypoint indicators appear only while any compass is held and within the configured maximum distance; no compass durability is consumed, and selecting a marker does **not** teleport the player.
+Sneak-right-click a lodestone or banner with any compass (ordinary, lodestone, or recovery) to create a waypoint at that block, or remove its waypoint if one already exists. Sneak-right-click another block with a compass to open the waypoint menu; sneak-right-click air also opens the menu. Regular right-clicking air does nothing. Rename the compass in an anvil first to choose the waypoint's label; otherwise it uses the block type and coordinates. The waypoint is published on BlueMap and stored by the plugin. In-game waypoint indicators appear only while any compass is held and within the configured maximum distance; no compass durability is consumed, and selecting a marker does **not** teleport the player.
 
 ## Requirements
 
@@ -11,13 +11,13 @@ Sneak-right-click a lodestone or banner with any compass (ordinary, lodestone, o
 - `bluemapcompass.use` (default: true)
 
 `plugins/AwepeepsBlueMapCompass/config.yml` controls marker placement. By default,
-only lodestones and banners are allowed. Waypoint indicators are limited to 512 blocks:
+only lodestones and banners are allowed. Waypoint indicators are limited to 50 blocks by default:
 
 ```yaml
 marker-targets:
   - LODESTONE
   - BANNER
-max-waypoint-distance: 512
+max-waypoint-distance: 50
 ```
 
 ## Build
@@ -28,14 +28,14 @@ Lodestone waypoint pillars and labels use a warm amber/gold accent; the BlueMap
 lodestone icon uses a matching shaded gold lens. Banner waypoints keep their
 banner-color pillar and label.
 
-The output is `build/libs/awepeeps-bluemap-compass-1.4.1-awepeeps.5.jar`.
+The output is `build/libs/awepeeps-bluemap-compass-1.4.1-awepeeps.6.jar`.
 
 ## Basic in-game acceptance
 
-1. Sneak-right-click a lodestone or banner with a compass to create a waypoint; sneak-right-clicking air opens the menu and regular right-clicking air does nothing.
+1. Sneak-right-click a lodestone or banner with a compass to create a waypoint, and sneak-right-click it again to remove the waypoint. Sneak-right-click an unsupported block or air to open the menu.
 2. Repeat marker creation and menu opening with ordinary, lodestone, and recovery compasses.
 3. Confirm no compass durability is consumed during creation, menu use, or tracking.
-4. Select the waypoint; an indicator and distance should appear while any compass is held, only inside the configured maximum draw distance.
+4. Select the waypoint; an indicator and distance should appear while any compass is held, only within 50 blocks by default.
 5. Put the compass away or move beyond the draw distance; verify the indicator disappears. Hold a compass again or return within range to restore it.
 6. Use the GUI toggles to switch between **Show All** and **Show Yours**, and
    between tracking or untracking all waypoints in the selected visibility scope.

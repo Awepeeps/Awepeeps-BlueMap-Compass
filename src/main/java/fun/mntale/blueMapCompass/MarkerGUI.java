@@ -290,7 +290,10 @@ public class MarkerGUI implements Listener {
             boolean allTracked = !markers.isEmpty()
                     && markers.stream().allMatch(marker -> tracked.contains(marker.id()));
             for (MarkerData marker : markers) {
-                if (allTracked) tracked.remove(marker.id());
+                if (allTracked) {
+                    tracked.remove(marker.id());
+                    WaypointManager.removeWaypointDisplayOnly(player, marker.id());
+                }
                 else tracked.add(marker.id());
             }
             WaypointManager.setTrackedMarkers(player, tracked);

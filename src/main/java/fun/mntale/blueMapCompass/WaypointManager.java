@@ -96,10 +96,9 @@ public class WaypointManager {
     private static void updateAllWaypoints(JavaPlugin plugin) {
         for (Player player : Bukkit.getOnlinePlayers()) {
             Set<String> tracked = getTrackedMarkers(player);
+            removeDisplaysNotTracked(player, tracked);
             if (!hasCompassInHand(player)) {
-                for (String markerId : tracked) {
-                    removeWaypointDisplayOnly(player, markerId);
-                }
+                removeAllDisplays(player);
                 continue;
             }
             for (String markerId : tracked) {
@@ -111,6 +110,26 @@ public class WaypointManager {
                 }
             }
         }
+    }
+
+    private static void removeDisplaysNotTracked(Player player, Set<String> tracked) {
+        Set<String> displayed = new HashSet<>();
+        Map<String, BlockDisplay> playerDisplays = waypoints.get(player.getUniqueId());
+        if (playerDisplays != null) displayed.addAll(playerDisplays.keySet());
+        Map<String, TextDisplay> playerTextDisplays = textDisplays.get(player.getUniqueId());
+        if (playerTextDisplays != null) displayed.addAll(playerTextDisplays.keySet());
+        for (String markerId : displayed) {
+            if (!tracked.contains(markerId)) removeWaypointDisplayOnly(player, markerId);
+        }
+    }
+
+    private static void removeAllDisplays(Player player) {
+        Set<String> displayed = new HashSet<>();
+        Map<String, BlockDisplay> playerDisplays = waypoints.get(player.getUniqueId());
+        if (playerDisplays != null) displayed.addAll(playerDisplays.keySet());
+        Map<String, TextDisplay> playerTextDisplays = textDisplays.get(player.getUniqueId());
+        if (playerTextDisplays != null) displayed.addAll(playerTextDisplays.keySet());
+        for (String markerId : displayed) removeWaypointDisplayOnly(player, markerId);
     }
 
     private static boolean hasCompassInHand(Player player) {
@@ -138,7 +157,7 @@ public class WaypointManager {
         }
         Location target = new Location(world, marker.x() + 0.5, marker.y(), marker.z() + 0.5);
         boolean inSameWorld = player.getWorld().getName().equals(world.getName());
-        double maxDistance = Math.max(0, plugin.getConfig().getDouble("max-waypoint-distance", 512));
+        double maxDistance = Math.max(0, plugin.getConfig().getDouble("max-waypoint-distance", 50));
         if (!inSameWorld || player.getLocation().distanceSquared(target) > maxDistance * maxDistance) {
             removeWaypointDisplayOnly(player, marker.id());
             return;

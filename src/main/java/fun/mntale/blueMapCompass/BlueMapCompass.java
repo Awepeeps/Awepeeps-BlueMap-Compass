@@ -34,6 +34,10 @@ public final class BlueMapCompass extends JavaPlugin implements Listener {
     public void onEnable() {
         instance = this;
         saveDefaultConfig();
+        if (Double.compare(getConfig().getDouble("max-waypoint-distance", 50), 512) == 0) {
+            getConfig().set("max-waypoint-distance", 50);
+            saveConfig();
+        }
         foliaLib = new FoliaLib(this);
         BlueMapIntegration.initialize(instance);
         bannerMarkerStorage = new BannerMarkerStorage(this);
@@ -67,12 +71,18 @@ public final class BlueMapCompass extends JavaPlugin implements Listener {
             if (event.getAction() == Action.RIGHT_CLICK_BLOCK) {
                 org.bukkit.block.Block target = event.getClickedBlock();
                 if (target == null) return;
+                event.setCancelled(true);
                 if (!isAllowedMarkerTarget(target)) {
-                    player.sendMessage(net.kyori.adventure.text.Component.text(
-                            "This block is not configured as a waypoint target."));
+                    MarkerGUI.openFor(player);
                     return;
                 }
-                event.setCancelled(true);
+                List<BannerMarkerStorage.BannerMarkerData> removed =
+                        bannerMarkerListener.removeMarkerAt(target);
+                if (!removed.isEmpty()) {
+                    removed.forEach(marker -> player.sendMessage(
+                            net.kyori.adventure.text.Component.text("Waypoint removed: " + marker.name)));
+                    return;
+                }
                 ItemMeta meta = item.getItemMeta();
                 String markerName = meta != null && meta.hasCustomName() && meta.customName() != null
                         ? PlainTextComponentSerializer.plainText().serialize(meta.customName()).trim()
