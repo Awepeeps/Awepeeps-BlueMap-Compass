@@ -1,0 +1,5 @@
+# Allowed blocks for creating a waypoint with sneak + right-click.
+marker-targets:
+  - LODESTONE
+  - BANNER
+max-waypoint-distance: 50

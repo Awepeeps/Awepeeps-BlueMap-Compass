@@ -23,6 +23,9 @@ import java.io.File;
 import java.net.URL;
 import java.util.HashMap;
 import java.awt.Graphics2D;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 
 public class BlueMapIntegration {
     private static Plugin plugin;
@@ -58,6 +61,7 @@ public class BlueMapIntegration {
         plugin = mainPlugin;
         BlueMapAPI.onEnable(api -> {
             java.nio.file.Path webRoot = api.getWebApp().getWebRoot();
+            installLodestoneIcon(webRoot);
             File bannerDir = webRoot.resolve("assets/bluemap/web/images/banners").toFile();
             if (!bannerDir.exists()) bannerDir.mkdirs();
             for (Map.Entry<String, String> entry : BANNER_IMAGE_URLS.entrySet()) {
@@ -82,36 +86,51 @@ public class BlueMapIntegration {
         BlueMapAPI.onDisable(api -> {});
     }
 
+    private static void installLodestoneIcon(Path webRoot) {
+        Path icon = webRoot.resolve("assets/bluemap/web/images/awepeeps/lodestone.svg");
+        try {
+            Files.createDirectories(icon.getParent());
+            try (InputStream input = plugin.getResource("lodestone-waypoint.svg")) {
+                if (input == null) throw new java.io.IOException("lodestone waypoint icon resource is missing");
+                Files.copy(input, icon, StandardCopyOption.REPLACE_EXISTING);
+            }
+        } catch (java.io.IOException e) {
+            plugin.getLogger().severe("Could not install BlueMap lodestone waypoint icon: " + e.getMessage());
+        }
+    }
+
     public static List<MarkerData> getMarkers() {
         List<MarkerData> markers = new ArrayList<>();
         Optional<BlueMapAPI> optionalApi = BlueMapAPI.getInstance();
         if (optionalApi.isEmpty()) return List.of();
         BlueMapAPI api = optionalApi.get();
-        BannerMarkerStorage bannerStorage = new BannerMarkerStorage(plugin);
-        List<BannerMarkerStorage.BannerMarkerData> bannerDataList = bannerStorage.getAllMarkers();
+        List<BannerMarkerStorage.BannerMarkerData> bannerDataList =
+                BlueMapCompass.instance.bannerMarkerStorage.getAllMarkers();
 
         // Add banner markers from storage (no duplicates)
         for (BannerMarkerStorage.BannerMarkerData banner : bannerDataList) {
             markers.add(new MarkerData(
                 banner.markerId,
                 banner.name,
-                "Banner",
+                banner.type,
                 banner.world,
                 banner.x,
                 banner.y,
                 banner.z,
-                "banner-markers",
+                "awepeeps-waypoints",
                 banner.placerName != null && !banner.placerName.isEmpty() ? banner.placerName : banner.placerUuid,
+                banner.placerUuid,
                 banner.color
             ));
         }
 
-        // Add other markers from BlueMap (skip banner-markers set)
+        // Add other markers from BlueMap, excluding this plugin's persisted waypoint sets.
         for (BlueMapWorld world : api.getWorlds()) {
             for (BlueMapMap map : world.getMaps()) {
                 for (Map.Entry<String, MarkerSet> entry : map.getMarkerSets().entrySet()) {
                     String markerSetId = entry.getKey();
-                    if (markerSetId.equalsIgnoreCase("banner-markers")) continue;
+                    if (markerSetId.equalsIgnoreCase("banner-markers")
+                            || markerSetId.equalsIgnoreCase("awepeeps-waypoints")) continue;
                     MarkerSet markerSet = entry.getValue();
                     for (Map.Entry<String, Marker> markerEntry : markerSet.getMarkers().entrySet()) {
                         String markerId = markerEntry.getKey();
@@ -132,6 +151,7 @@ public class BlueMapIntegration {
                             world.getId(),
                             x, y, z,
                             markerSetId,
+                            null,
                             null,
                             null
                         ));

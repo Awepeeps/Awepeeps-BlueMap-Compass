@@ -8,11 +8,12 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.persistence.PersistentDataType;
-import org.bukkit.Location;
-import org.bukkit.World;
+import org.bukkit.block.Banner;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+import org.bukkit.inventory.meta.ItemMeta;
 
 import com.tcoded.folialib.FoliaLib;
 
@@ -32,6 +33,11 @@ public final class BlueMapCompass extends JavaPlugin implements Listener {
     @Override
     public void onEnable() {
         instance = this;
+        saveDefaultConfig();
+        if (Double.compare(getConfig().getDouble("max-waypoint-distance", 50), 512) == 0) {
+            getConfig().set("max-waypoint-distance", 50);
+            saveConfig();
+        }
         foliaLib = new FoliaLib(this);
         BlueMapIntegration.initialize(instance);
         bannerMarkerStorage = new BannerMarkerStorage(this);
@@ -55,17 +61,57 @@ public final class BlueMapCompass extends JavaPlugin implements Listener {
     public void onCompassRightClick(PlayerInteractEvent event) {
         Player player = event.getPlayer();
         ItemStack item = event.getItem();
-        
+        ItemStack mainHand = player.getInventory().getItemInMainHand();
+        if (event.getHand() == EquipmentSlot.OFF_HAND && isCompass(mainHand)) return;
         if (!player.hasPermission("bluemapcompass.use")) {
             return;
         }
         
-        if (event.getAction() == Action.RIGHT_CLICK_AIR || event.getAction() == Action.RIGHT_CLICK_BLOCK) {
-            if (item != null && item.getType() == Material.COMPASS) {
+        if (isCompass(item) && player.isSneaking()) {
+            if (event.getAction() == Action.RIGHT_CLICK_BLOCK) {
+                org.bukkit.block.Block target = event.getClickedBlock();
+                if (target == null) return;
+                event.setCancelled(true);
+                if (!isAllowedMarkerTarget(target)) {
+                    MarkerGUI.openFor(player);
+                    return;
+                }
+                List<BannerMarkerStorage.BannerMarkerData> removed =
+                        bannerMarkerListener.removeMarkerAt(target);
+                if (!removed.isEmpty()) {
+                    removed.forEach(marker -> player.sendMessage(
+                            net.kyori.adventure.text.Component.text("Waypoint removed: " + marker.name)));
+                    return;
+                }
+                ItemMeta meta = item.getItemMeta();
+                String markerName = meta != null && meta.hasCustomName() && meta.customName() != null
+                        ? PlainTextComponentSerializer.plainText().serialize(meta.customName()).trim()
+                        : "";
+                if (markerName.isBlank()) {
+                    markerName = (target.getState() instanceof Banner ? "Banner" : "Lodestone")
+                            + " at " + target.getX() + ", " + target.getY() + ", " + target.getZ();
+                }
+                bannerMarkerListener.createMarker(target, player, markerName);
+            }
+            if (event.getAction() == Action.RIGHT_CLICK_AIR) {
                 event.setCancelled(true);
                 MarkerGUI.openFor(player);
             }
         }
+    }
+
+    public static boolean isCompass(ItemStack item) {
+        if (item == null) return false;
+        Material type = item.getType();
+        return type == Material.COMPASS || type == Material.RECOVERY_COMPASS;
+    }
+
+    private boolean isAllowedMarkerTarget(org.bukkit.block.Block block) {
+        java.util.List<String> allowed = getConfig().getStringList("marker-targets").stream()
+                .map(String::toUpperCase)
+                .toList();
+        return (block.getType() == Material.LODESTONE && allowed.contains("LODESTONE"))
+                || (block.getState() instanceof Banner && allowed.contains("BANNER"));
     }
 
     @EventHandler
