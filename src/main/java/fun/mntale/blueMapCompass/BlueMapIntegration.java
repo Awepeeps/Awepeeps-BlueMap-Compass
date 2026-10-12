@@ -87,31 +87,32 @@ public class BlueMapIntegration {
         Optional<BlueMapAPI> optionalApi = BlueMapAPI.getInstance();
         if (optionalApi.isEmpty()) return List.of();
         BlueMapAPI api = optionalApi.get();
-        BannerMarkerStorage bannerStorage = new BannerMarkerStorage(plugin);
-        List<BannerMarkerStorage.BannerMarkerData> bannerDataList = bannerStorage.getAllMarkers();
+        List<BannerMarkerStorage.BannerMarkerData> bannerDataList =
+                BlueMapCompass.instance.bannerMarkerStorage.getAllMarkers();
 
         // Add banner markers from storage (no duplicates)
         for (BannerMarkerStorage.BannerMarkerData banner : bannerDataList) {
             markers.add(new MarkerData(
                 banner.markerId,
                 banner.name,
-                "Banner",
+                banner.type,
                 banner.world,
                 banner.x,
                 banner.y,
                 banner.z,
-                "banner-markers",
+                "awepeeps-waypoints",
                 banner.placerName != null && !banner.placerName.isEmpty() ? banner.placerName : banner.placerUuid,
                 banner.color
             ));
         }
 
-        // Add other markers from BlueMap (skip banner-markers set)
+        // Add other markers from BlueMap, excluding this plugin's persisted waypoint sets.
         for (BlueMapWorld world : api.getWorlds()) {
             for (BlueMapMap map : world.getMaps()) {
                 for (Map.Entry<String, MarkerSet> entry : map.getMarkerSets().entrySet()) {
                     String markerSetId = entry.getKey();
-                    if (markerSetId.equalsIgnoreCase("banner-markers")) continue;
+                    if (markerSetId.equalsIgnoreCase("banner-markers")
+                            || markerSetId.equalsIgnoreCase("awepeeps-waypoints")) continue;
                     MarkerSet markerSet = entry.getValue();
                     for (Map.Entry<String, Marker> markerEntry : markerSet.getMarkers().entrySet()) {
                         String markerId = markerEntry.getKey();

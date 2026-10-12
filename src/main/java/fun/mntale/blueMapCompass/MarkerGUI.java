@@ -73,9 +73,9 @@ public class MarkerGUI implements Listener {
     public static void openFor(Player player) {
         List<MarkerData> markers = getBlueMapMarkers();
         List<String> groupIds = markers.stream().map(MarkerData::groupId).distinct().collect(Collectors.toList());
-        if (groupIds.isEmpty()) groupIds = List.of("banner-markers");
+        if (groupIds.isEmpty()) groupIds = List.of("awepeeps-waypoints");
         int groupIndex = 0;
-        if (groupIds.contains("banner-markers")) groupIndex = groupIds.indexOf("banner-markers");
+        if (groupIds.contains("awepeeps-waypoints")) groupIndex = groupIds.indexOf("awepeeps-waypoints");
         int page = 0;
         var pdc = player.getPersistentDataContainer();
         if (pdc.has(MARKER_ID_KEY, PersistentDataType.STRING)) {
@@ -126,7 +126,9 @@ public class MarkerGUI implements Listener {
         String titleRaw = GUI_TITLE_RAW + " <gray>- <yellow>" + groupId;
         Inventory gui = Bukkit.createInventory(null, INVENTORY_SIZE, MM.deserialize(titleRaw));
         if (groupMarkers.isEmpty()) {
-            gui.setItem(22, createButton(Material.BARRIER, MM.deserialize("<red>No markers in this category.")));
+            gui.setItem(22, createButton(Material.PAPER, MM.deserialize("<yellow>No waypoints yet"),
+                    List.of(MM.deserialize("<gray>Sneak + right-click a lodestone or banner"),
+                            MM.deserialize("<gray>while holding a compass to add one."))));
         } else {
             for (int i = start; i < end; i++) {
                 MarkerData marker = groupMarkers.get(i);
@@ -152,7 +154,7 @@ public class MarkerGUI implements Listener {
         Set<String> tracked = WaypointManager.getTrackedMarkers(player);
         boolean isTracked = tracked.contains(marker.id());
         Component displayName;
-        if (marker.groupId().equalsIgnoreCase("banner-markers")) {
+        if (marker.type().equalsIgnoreCase("banner")) {
             String colorName = marker.color() != null ? marker.color().toLowerCase() : "white";
             String hex = BANNER_TO_HEX.getOrDefault(colorName, "#FFFFFF");
             String colorTag = colorName.length() > 0 ? "<color:" + hex + ">" : "";
@@ -187,7 +189,7 @@ public class MarkerGUI implements Listener {
     }
 
     private static Material getMarkerIcon(String type, MarkerData marker) {
-        if (marker.groupId().equalsIgnoreCase("banner-markers")) {
+        if (marker.type().equalsIgnoreCase("banner")) {
             String colorName = marker.color() != null ? marker.color().toUpperCase() : "WHITE";
             try {
                 return Material.valueOf(colorName + "_BANNER");
@@ -195,9 +197,8 @@ public class MarkerGUI implements Listener {
                 return Material.WHITE_BANNER;
             }
         }
-        return switch (type.toLowerCase()) {
-            default -> Material.NAME_TAG;
-        };
+        if (type.equalsIgnoreCase("lodestone")) return Material.LODESTONE;
+        return Material.NAME_TAG;
     }
 
     private static ItemStack createButton(Material material, Component name) {
@@ -246,7 +247,7 @@ public class MarkerGUI implements Listener {
         Component displayName = meta != null ? meta.displayName() : null;
         List<MarkerData> markers = getBlueMapMarkers();
         List<String> groupIds = markers.stream().map(MarkerData::groupId).distinct().collect(Collectors.toList());
-        if (groupIds.isEmpty()) groupIds = List.of("banner-markers");
+        if (groupIds.isEmpty()) groupIds = List.of("awepeeps-waypoints");
         GuiState state = getPlayerGuiState(player, groupIds);
         if (clicked.getType() == Material.BARRIER) {
             if (displayName != null && PlainTextComponentSerializer.plainText().serialize(displayName).equalsIgnoreCase("Untrack All")) {
