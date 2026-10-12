@@ -24,7 +24,11 @@ max-waypoint-distance: 512
 
 Run `bash automation/build-bluemap-compass.sh`. The helper uses a digest-pinned Gradle/JDK 25 container, verifies the Gradle wrapper distribution checksum, normalizes build inputs, and produces a reproducible shaded plugin jar. The deployment repository pins and verifies the artifact SHA-256.
 
-The output is `build/libs/awepeeps-bluemap-compass-1.4.1-awepeeps.4.jar`.
+Lodestone waypoint pillars and labels use a warm amber/gold accent; the BlueMap
+lodestone icon uses a matching shaded gold lens. Banner waypoints keep their
+banner-color pillar and label.
+
+The output is `build/libs/awepeeps-bluemap-compass-1.4.1-awepeeps.5.jar`.
 
 ## Basic in-game acceptance
 
