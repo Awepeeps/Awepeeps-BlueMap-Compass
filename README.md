@@ -1,28 +1,25 @@
-# BlueMap Compass Plugin
+# Awepeeps BlueMap Compass
 
-A Minecraft plugin that allows players to view and set waypoint to BlueMap markers through a custom GUI when right-clicking with a compass.
+Maintained fork of [MidnightTale/BlueMap-Compass](https://github.com/MidnightTale/BlueMap-Compass), prepared for the Awepeeps Paper 26.3 test server.
 
-1. **Get a Compass**: Obtain any compass item (vanilla compass works)
-2. **Right-Click**: Right-click with the compass in hand
-3. **Browse Markers**: The GUI will show all available BlueMap markers
-4. **Teleport**: Click on any marker to set waypoint tracker
+Right-click with an ordinary compass to browse markers published by BlueMap. Select a marker to track or untrack a visible waypoint; selecting a marker does **not** teleport the player. The plugin also publishes named banners as BlueMap markers and offers them as waypoints.
 
----
+## Requirements
 
-## Banner Markers (Built-in Feature)
+- Paper 26.3 (build 175) and Java 25
+- BlueMap with its API available
+- `bluemapcompass.use` (default: true)
 
-- Players can create **Banner Markers** by placing banners with custom name in the world.
-- Banner markers are automatically detected and shown in the GUI and on BlueMap.
-- Each banner marker displays its color, name, location, and owner.
-- Players can track/untrack banner markers as waypoints just like any other marker.
-- Banner markers are persistent and integrated with the plugin's waypoint and display system.
+## Build
 
----
+Run `bash automation/build-bluemap-compass.sh`. The helper uses a digest-pinned Gradle/JDK 25 container, verifies the Gradle wrapper distribution checksum, normalizes build inputs, and produces a reproducible shaded plugin jar. The deployment repository pins and verifies the artifact SHA-256.
 
-#### Permissions
+The output is `build/libs/awepeeps-bluemap-compass-1.4.1-awepeeps.1.jar`.
 
-- `bluemapcompass.use` - Allows players to use the compass GUI (default: true)
-![image](https://github.com/user-attachments/assets/f441b45a-b614-4c72-8df0-97321f5c0939)
-![image](https://github.com/user-attachments/assets/7cf55f70-4ef6-4fc8-a575-47712833889d)
-![image](https://github.com/user-attachments/assets/a8fd7179-f8d4-427a-95bd-e53f5bcb0d38)
-![image](https://github.com/user-attachments/assets/5d52debd-0758-4254-8518-5ffc1073bc2d)
+## Basic in-game acceptance
+
+1. Hold a regular compass and right-click to open the BlueMap markers menu.
+2. Select a marker; a visible waypoint indicator and distance should appear.
+3. Select it again to stop tracking, or use **Untrack All**.
+4. Confirm selection never teleports the player.
+5. Place a custom-named banner, then confirm its marker is listed and can be tracked.

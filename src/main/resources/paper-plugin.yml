@@ -1,8 +1,8 @@
-name: BlueMapCompass
-version: '1.0'
+name: AwepeepsBlueMapCompass
+version: '${version}'
 main: fun.mntale.blueMapCompass.BlueMapCompass
-api-version: '1.21'
-authors: [ MidnightTale_ ]
+api-version: '26.3'
+authors: [ Awepeeps, MidnightTale_ ]
 website: https://mntale.fun
 folia-supported: true
 dependencies:
