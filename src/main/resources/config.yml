@@ -2,3 +2,4 @@
 marker-targets:
   - LODESTONE
   - BANNER
+max-waypoint-distance: 512

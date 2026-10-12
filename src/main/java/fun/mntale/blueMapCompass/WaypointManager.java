@@ -104,8 +104,10 @@ public class WaypointManager {
             }
             for (String markerId : tracked) {
                 MarkerData marker = getMarkerDataById(markerId);
-                if (marker != null) {
+                if (marker != null && MarkerGUI.isVisibleTo(player, marker)) {
                     updateOrSpawnWaypoint(player, marker, plugin);
+                } else {
+                    removeWaypointDisplayOnly(player, markerId);
                 }
             }
         }
@@ -136,6 +138,11 @@ public class WaypointManager {
         }
         Location target = new Location(world, marker.x() + 0.5, marker.y(), marker.z() + 0.5);
         boolean inSameWorld = player.getWorld().getName().equals(world.getName());
+        double maxDistance = Math.max(0, plugin.getConfig().getDouble("max-waypoint-distance", 512));
+        if (!inSameWorld || player.getLocation().distanceSquared(target) > maxDistance * maxDistance) {
+            removeWaypointDisplayOnly(player, marker.id());
+            return;
+        }
         Map<String, BlockDisplay> playerDisplays = waypoints.get(player.getUniqueId());
         Map<String, TextDisplay> playerTextDisplays = textDisplays.get(player.getUniqueId());
         BlockDisplay activeDisplay = playerDisplays != null ? playerDisplays.get(marker.id()) : null;
@@ -204,11 +211,6 @@ public class WaypointManager {
             // Add null check before updating displays
             if (activeDisplay == null || activeTextDisplay == null) return;
             updateWaypointDisplays(player, target, marker.name(), marker.type(), marker.id(), activeDisplay, activeTextDisplay, marker.color());
-        } else {
-            // Remove displays if they exist, but do NOT cancel the timer; displays will respawn if player returns to the world
-            if ((activeDisplay != null && !activeDisplay.isDead()) || (activeTextDisplay != null && !activeTextDisplay.isDead())) {
-                removeWaypointDisplayOnly(player, marker.id());
-            }
         }
     }
 

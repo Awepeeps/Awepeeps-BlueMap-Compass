@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'fun.mntale'
-version = '1.4.1-awepeeps.3'
+version = '1.4.1-awepeeps.4'
 
 repositories {
     mavenCentral()

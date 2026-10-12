@@ -28,12 +28,14 @@ public class MarkerGUI implements Listener {
     private static final int INVENTORY_SIZE = 54;
     private static final int PAGE_SIZE = 45;
     private static final int SLOT_CATEGORY = 45;
+    private static final int SLOT_OWNER_FILTER = 46;
     private static final int SLOT_PREV = 48;
-    private static final int SLOT_UNTRACK = 49;
+    private static final int SLOT_TRACK_TOGGLE = 49;
     private static final int SLOT_NEXT = 50;
     private static final int SLOT_CLOSE = 53;
     private static final Material CATEGORY_ICON = Material.BOOK;
     private static final NamespacedKey MARKER_ID_KEY = new NamespacedKey("bluemapcompass", "marker_id");
+    private static final NamespacedKey SHOW_OWN_MARKERS_KEY = new NamespacedKey("bluemapcompass", "show_own_markers");
 
     // Map banner color names to closest MiniMessage hex color codes
     private static final Map<String, String> BANNER_TO_HEX = Map.ofEntries(
@@ -71,7 +73,7 @@ public class MarkerGUI implements Listener {
      * @param player the player
      */
     public static void openFor(Player player) {
-        List<MarkerData> markers = getBlueMapMarkers();
+        List<MarkerData> markers = getVisibleMarkers(player);
         List<String> groupIds = markers.stream().map(MarkerData::groupId).distinct().collect(Collectors.toList());
         if (groupIds.isEmpty()) groupIds = List.of("awepeeps-waypoints");
         int groupIndex = 0;
@@ -118,7 +120,7 @@ public class MarkerGUI implements Listener {
     }
 
     private static void showPage(Player player, GuiState state) {
-        List<MarkerData> allMarkers = getBlueMapMarkers();
+        List<MarkerData> allMarkers = getVisibleMarkers(player);
         String groupId = state.groupIds().get(state.groupIndex());
         List<MarkerData> groupMarkers = allMarkers.stream().filter(m -> m.groupId().equals(groupId)).toList();
         int start = state.page() * PAGE_SIZE;
@@ -138,13 +140,19 @@ public class MarkerGUI implements Listener {
         if (state.groupIds().size() > 1) {
             gui.setItem(SLOT_CATEGORY, createCategoryButton(state));
         }
+        gui.setItem(SLOT_OWNER_FILTER, createOwnerFilterButton(player));
         if (state.page() > 0) {
             gui.setItem(SLOT_PREV, createButton(Material.ARROW, MM.deserialize("<green>Previous Page")));
         }
         if (end < groupMarkers.size()) {
             gui.setItem(SLOT_NEXT, createButton(Material.ARROW, MM.deserialize("<green>Next Page")));
         }
-        gui.setItem(SLOT_UNTRACK, createButton(Material.BARRIER, MM.deserialize("<red>Untrack All")));
+        boolean allTracked = !allMarkers.isEmpty() && allMarkers.stream()
+                .allMatch(marker -> WaypointManager.getTrackedMarkers(player).contains(marker.id()));
+        gui.setItem(SLOT_TRACK_TOGGLE, createButton(
+                allTracked ? Material.RED_DYE : Material.LIME_DYE,
+                MM.deserialize(allTracked ? "<red>Untrack All Shown" : "<green>Track All Shown"),
+                List.of(MM.deserialize("<gray>Applies to the current waypoint filter."))));
         gui.setItem(SLOT_CLOSE, createButton(Material.BARRIER, MM.deserialize("<red>Close")));
         player.openInventory(gui);
     }
@@ -235,27 +243,64 @@ public class MarkerGUI implements Listener {
         return BlueMapIntegration.getMarkers();
     }
 
+    public static boolean showsOwnMarkers(Player player) {
+        return player.getPersistentDataContainer().getOrDefault(
+                SHOW_OWN_MARKERS_KEY, PersistentDataType.BOOLEAN, false);
+    }
+
+    public static boolean isVisibleTo(Player player, MarkerData marker) {
+        return !showsOwnMarkers(player) || player.getUniqueId().toString().equals(marker.ownerUuid());
+    }
+
+    private static List<MarkerData> getVisibleMarkers(Player player) {
+        return getBlueMapMarkers().stream().filter(marker -> isVisibleTo(player, marker)).toList();
+    }
+
+    private static ItemStack createOwnerFilterButton(Player player) {
+        boolean ownOnly = showsOwnMarkers(player);
+        return createButton(
+                ownOnly ? Material.PLAYER_HEAD : Material.MAP,
+                MM.deserialize(ownOnly ? "<aqua>Showing: Yours" : "<aqua>Showing: All"),
+                List.of(MM.deserialize("<gray>Click to switch waypoint visibility.")));
+    }
+
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
         if (!event.getView().getTitle().contains("BlueMap Markers")) return;
         event.setCancelled(true);
+        if (event.getClickedInventory() != event.getView().getTopInventory()) return;
         player.updateInventory();
         ItemStack clicked = event.getCurrentItem();
         if (clicked == null || clicked.getType() == Material.AIR) return;
         ItemMeta meta = clicked.getItemMeta();
         Component displayName = meta != null ? meta.displayName() : null;
-        List<MarkerData> markers = getBlueMapMarkers();
+        List<MarkerData> markers = getVisibleMarkers(player);
         List<String> groupIds = markers.stream().map(MarkerData::groupId).distinct().collect(Collectors.toList());
         if (groupIds.isEmpty()) groupIds = List.of("awepeeps-waypoints");
         GuiState state = getPlayerGuiState(player, groupIds);
-        if (clicked.getType() == Material.BARRIER) {
-            if (displayName != null && PlainTextComponentSerializer.plainText().serialize(displayName).equalsIgnoreCase("Untrack All")) {
-                WaypointManager.removeAllWaypoints(player);
-                player.sendMessage(MM.deserialize("<gray>All waypoints untracked."));
-                player.closeInventory();
-                return;
+        if (event.getSlot() == SLOT_OWNER_FILTER) {
+            player.getPersistentDataContainer().set(
+                    SHOW_OWN_MARKERS_KEY, PersistentDataType.BOOLEAN, !showsOwnMarkers(player));
+            openFor(player);
+            return;
+        }
+        if (event.getSlot() == SLOT_TRACK_TOGGLE) {
+            Set<String> tracked = WaypointManager.getTrackedMarkers(player);
+            boolean allTracked = !markers.isEmpty()
+                    && markers.stream().allMatch(marker -> tracked.contains(marker.id()));
+            for (MarkerData marker : markers) {
+                if (allTracked) tracked.remove(marker.id());
+                else tracked.add(marker.id());
             }
+            WaypointManager.setTrackedMarkers(player, tracked);
+            player.sendMessage(MM.deserialize(allTracked
+                    ? "<gray>All shown waypoints untracked."
+                    : "<green>All shown waypoints tracked."));
+            openFor(player);
+            return;
+        }
+        if (clicked.getType() == Material.BARRIER) {
             player.closeInventory();
             return;
         }

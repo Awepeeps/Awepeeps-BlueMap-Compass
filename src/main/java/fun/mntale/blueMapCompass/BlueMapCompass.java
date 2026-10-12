@@ -63,32 +63,29 @@ public final class BlueMapCompass extends JavaPlugin implements Listener {
             return;
         }
         
-        if (event.getAction() == Action.RIGHT_CLICK_AIR || event.getAction() == Action.RIGHT_CLICK_BLOCK) {
-            if (isCompass(item)) {
-                if (event.getAction() == Action.RIGHT_CLICK_BLOCK && player.isSneaking()) {
-                    org.bukkit.block.Block target = event.getClickedBlock();
-                    if (target == null) return;
-                    if (!isAllowedMarkerTarget(target)) {
-                        player.sendMessage(net.kyori.adventure.text.Component.text(
-                                "This block is not configured as a waypoint target."));
-                        return;
-                    }
-                    event.setCancelled(true);
-                    ItemMeta meta = item.getItemMeta();
-                    String markerName = meta != null && meta.hasCustomName() && meta.customName() != null
-                            ? PlainTextComponentSerializer.plainText().serialize(meta.customName()).trim()
-                            : "";
-                    if (markerName.isBlank()) {
-                        markerName = (target.getState() instanceof Banner ? "Banner" : "Lodestone")
-                                + " at " + target.getX() + ", " + target.getY() + ", " + target.getZ();
-                    }
-                    bannerMarkerListener.createMarker(target, player, markerName);
+        if (isCompass(item) && player.isSneaking()) {
+            if (event.getAction() == Action.RIGHT_CLICK_BLOCK) {
+                org.bukkit.block.Block target = event.getClickedBlock();
+                if (target == null) return;
+                if (!isAllowedMarkerTarget(target)) {
+                    player.sendMessage(net.kyori.adventure.text.Component.text(
+                            "This block is not configured as a waypoint target."));
                     return;
                 }
-                if (event.getAction() == Action.RIGHT_CLICK_AIR && !player.isSneaking()) {
-                    event.setCancelled(true);
-                    MarkerGUI.openFor(player);
+                event.setCancelled(true);
+                ItemMeta meta = item.getItemMeta();
+                String markerName = meta != null && meta.hasCustomName() && meta.customName() != null
+                        ? PlainTextComponentSerializer.plainText().serialize(meta.customName()).trim()
+                        : "";
+                if (markerName.isBlank()) {
+                    markerName = (target.getState() instanceof Banner ? "Banner" : "Lodestone")
+                            + " at " + target.getX() + ", " + target.getY() + ", " + target.getZ();
                 }
+                bannerMarkerListener.createMarker(target, player, markerName);
+            }
+            if (event.getAction() == Action.RIGHT_CLICK_AIR) {
+                event.setCancelled(true);
+                MarkerGUI.openFor(player);
             }
         }
     }

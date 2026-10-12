@@ -62,7 +62,9 @@ public class BannerMarkerListener implements Listener {
                             if (type.equals("banner")) {
                                 String iconUrl = "assets/bluemap/web/images/banners/"
                                         + color.toLowerCase() + ".png";
-                                markerBuilder.icon(iconUrl, 32, 48);
+                                markerBuilder.icon(iconUrl, 12, 48);
+                            } else {
+                                markerBuilder.icon("assets/bluemap/web/images/awepeeps/lodestone.svg", 16, 40);
                             }
                             markerSet.getMarkers().put(markerId, markerBuilder.build());
                         })));
@@ -155,7 +157,9 @@ public class BannerMarkerListener implements Listener {
                     if ("banner".equalsIgnoreCase(data.type)) {
                         String iconUrl = "assets/bluemap/web/images/banners/"
                                 + data.color.toLowerCase() + ".png";
-                        markerBuilder.icon(iconUrl, 32, 48);
+                        markerBuilder.icon(iconUrl, 12, 48);
+                    } else {
+                        markerBuilder.icon("assets/bluemap/web/images/awepeeps/lodestone.svg", 16, 40);
                     }
                     markerSet.getMarkers().put(data.markerId, markerBuilder.build());
                 }));
