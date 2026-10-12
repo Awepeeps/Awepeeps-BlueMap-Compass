@@ -1,9 +1,10 @@
 package fun.mntale.blueMapCompass;
 
+import com.flowpowered.math.vector.Vector3d;
 import de.bluecolored.bluemap.api.BlueMapAPI;
-import de.bluecolored.bluemap.api.markers.POIMarker;
-import de.bluecolored.bluemap.api.markers.MarkerSet;
 import de.bluecolored.bluemap.api.BlueMapWorld;
+import de.bluecolored.bluemap.api.markers.MarkerSet;
+import de.bluecolored.bluemap.api.markers.POIMarker;
 import org.bukkit.DyeColor;
 import org.bukkit.Location;
 import org.bukkit.block.Banner;
@@ -11,185 +12,163 @@ import org.bukkit.block.Block;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
-import org.bukkit.event.block.BlockPlaceEvent;
-import org.bukkit.inventory.ItemStack;
-import com.flowpowered.math.vector.Vector3d;
-import java.util.Optional;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+import org.bukkit.event.block.BlockBurnEvent;
 import org.bukkit.event.block.BlockExplodeEvent;
-import org.bukkit.event.entity.EntityExplodeEvent;
+import org.bukkit.event.block.BlockFadeEvent;
+import org.bukkit.event.block.BlockFromToEvent;
 import org.bukkit.event.block.BlockPistonExtendEvent;
 import org.bukkit.event.block.BlockPistonRetractEvent;
-import org.bukkit.event.block.BlockBurnEvent;
-import org.bukkit.event.block.BlockFromToEvent;
-import org.bukkit.event.block.BlockFadeEvent;
-import org.bukkit.event.block.BlockPhysicsEvent;
+import org.bukkit.event.entity.EntityExplodeEvent;
+import org.bukkit.entity.Player;
+
+import java.util.List;
+import java.util.Optional;
 
 public class BannerMarkerListener implements Listener {
+    private static final String MARKER_SET_ID = "awepeeps-waypoints";
 
-    @EventHandler
-    public void onBannerPlace(BlockPlaceEvent event) {
-        Block block = event.getBlockPlaced();
-        if (!(block.getState() instanceof Banner banner)) return;
-        ItemStack item = event.getItemInHand();
-        if (!(item.hasItemMeta() && item.getItemMeta().hasDisplayName())) {
-            if (fun.mntale.blueMapCompass.BlueMapCompass.debug) {
-                org.bukkit.Bukkit.getLogger().info("[BlueMapCompass][DEBUG] Banner placed with NO custom name at " + block.getLocation());
-            }
-            return; // Ignore banners with no custom name
-        }
-        if (fun.mntale.blueMapCompass.BlueMapCompass.debug) {
-            org.bukkit.Bukkit.getLogger().info("[BlueMapCompass][DEBUG] Banner placed with custom name at " + block.getLocation());
-        }
-        Component nameComponent = item.getItemMeta().displayName();
-        String name = PlainTextComponentSerializer.plainText().serialize(nameComponent);
-        DyeColor color = banner.getBaseColor();
-        Location loc = block.getLocation();
-        String worldName = loc.getWorld().getName();
-        Vector3d pos = new Vector3d(loc.getX(), loc.getY(), loc.getZ());
-        String markerId = "banner-" + worldName + "-" + loc.getBlockX() + "-" + loc.getBlockY() + "-" + loc.getBlockZ() + "-" + color;
-        String placerUuid = event.getPlayer().getUniqueId().toString();
-        String placerName = event.getPlayer().getName();
-        // Save to storage
-        BlueMapCompass.instance.bannerMarkerStorage.addMarker(worldName, loc.getBlockX(), loc.getBlockY(), loc.getBlockZ(), name, color.name(), markerId, placerUuid, placerName);
-        // Create marker in BlueMap
-        BlueMapAPI.getInstance().ifPresent(api -> {
-            Optional<BlueMapWorld> blueMapWorld = api.getWorld(loc.getWorld().getUID());
-            blueMapWorld.ifPresent(world -> {
-                world.getMaps().forEach(map -> {
-                    MarkerSet markerSet = map.getMarkerSets().computeIfAbsent("banner-markers", k -> MarkerSet.builder().label("Banner Markers").build());
-                    String description = "<b>" + name + "</b><br>" +
-                                       "<b>Position:</b> " + loc.getBlockX() + ", " + loc.getBlockY() + ", " + loc.getBlockZ() +
-                                       "<br><b>Owner:</b> " + placerName;
-                    String iconUrl = "assets/bluemap/web/images/banners/" + color.name().toLowerCase() + ".png";
-                    POIMarker marker = POIMarker.builder()
-                            .label(name)
-                            .position(pos)
-                            .detail(description)
-                            .icon(iconUrl, 0, 0)
-                            .maxDistance(100000)
-                            .build();
-                    markerSet.getMarkers().put(markerId, marker);
-                    if (fun.mntale.blueMapCompass.BlueMapCompass.debug) {
-                        org.bukkit.Bukkit.getLogger().info("[BlueMapCompass][DEBUG] Banner marker added: " + markerId);
-                    }
-                });
-            });
-        });
+    public void createMarker(Block block, Player player, String name) {
+        Location location = block.getLocation();
+        String worldName = location.getWorld().getName();
+        String type = block.getState() instanceof Banner ? "banner" : "lodestone";
+        String color = block.getState() instanceof Banner banner ? banner.getBaseColor().name() : "";
+        String markerId = "waypoint-" + worldName + "-" + location.getBlockX() + "-"
+                + location.getBlockY() + "-" + location.getBlockZ();
+
+        BlueMapCompass.instance.bannerMarkerStorage.addMarker(
+                worldName, location.getBlockX(), location.getBlockY(), location.getBlockZ(),
+                name, type, color, markerId, player.getUniqueId().toString(), player.getName());
+        addBlueMapMarker(location, name, type, color, markerId, player.getName());
+        WaypointManager.addTrackedWaypoint(player, new MarkerData(
+                markerId, name, type, worldName, location.getBlockX(), location.getBlockY(),
+                location.getBlockZ(), MARKER_SET_ID, player.getName(),
+                player.getUniqueId().toString(), color), BlueMapCompass.instance);
+        player.sendMessage(net.kyori.adventure.text.Component.text("Waypoint created: " + name));
     }
 
-    // Utility to handle banner removal logic
-    private void handleBannerRemove(Block block, String eventType) {
-        if (!(block.getState() instanceof Banner banner)) return;
-        Location loc = block.getLocation();
-        String worldName = loc.getWorld().getName();
-        DyeColor color = banner.getBaseColor();
-        String markerId = "banner-" + worldName + "-" + loc.getBlockX() + "-" + loc.getBlockY() + "-" + loc.getBlockZ() + "-" + color;
-        if (fun.mntale.blueMapCompass.BlueMapCompass.debug) {
-            org.bukkit.Bukkit.getLogger().info("[BlueMapCompass][DEBUG] Banner marker removed by " + eventType + " at " + loc + " markerId=" + markerId);
-        }
-        // Remove from storage
-        BlueMapCompass.instance.bannerMarkerStorage.removeMarkerByLocation(worldName, loc.getBlockX(), loc.getBlockY(), loc.getBlockZ());
-        // Remove marker from BlueMap by markerId (for live update)
-        BlueMapCompass.instance.bannerMarkerStorage.removeMarker(markerId);
-        // Remove marker from BlueMap
-        BlueMapAPI.getInstance().ifPresent(api -> {
-            Optional<BlueMapWorld> blueMapWorld = api.getWorld(loc.getWorld().getUID());
-            blueMapWorld.ifPresent(world -> {
-                world.getMaps().forEach(map -> {
-                    MarkerSet markerSet = map.getMarkerSets().get("banner-markers");
-                    if (markerSet != null) {
-                        markerSet.getMarkers().remove(markerId);
-                    }
-                });
-            });
-        });
-        // Untrack for all online players and remove displays
-        for (org.bukkit.entity.Player player : org.bukkit.Bukkit.getOnlinePlayers()) {
-            java.util.Set<String> tracked = fun.mntale.blueMapCompass.WaypointManager.getTrackedMarkers(player);
-            if (tracked.contains(markerId)) {
-                tracked.remove(markerId);
-                fun.mntale.blueMapCompass.WaypointManager.setTrackedMarkers(player, tracked);
-                fun.mntale.blueMapCompass.WaypointManager.removeWaypointDisplayOnly(player, markerId);
+    private void addBlueMapMarker(Location location, String name, String type, String color,
+                                  String markerId, String owner) {
+        BlueMapAPI.getInstance().ifPresent(api ->
+                api.getWorld(location.getWorld().getUID()).ifPresent(world ->
+                        world.getMaps().forEach(map -> {
+                            MarkerSet markerSet = map.getMarkerSets().computeIfAbsent(
+                                    MARKER_SET_ID,
+                                    key -> MarkerSet.builder().label("Awepeeps Waypoints").build());
+                            String detail = "<b>" + name + "</b><br>"
+                                    + "<b>Position:</b> " + location.getBlockX() + ", "
+                                    + location.getBlockY() + ", " + location.getBlockZ()
+                                    + "<br><b>Owner:</b> " + owner;
+                            POIMarker.Builder markerBuilder = POIMarker.builder()
+                                    .label(name)
+                                    .position(new Vector3d(location.getX(), location.getY(), location.getZ()))
+                                    .detail(detail)
+                                    .maxDistance(100000);
+                            if (type.equals("banner")) {
+                                String iconUrl = "assets/bluemap/web/images/banners/"
+                                        + color.toLowerCase() + ".png";
+                                markerBuilder.icon(iconUrl, 12, 48);
+                            } else {
+                                markerBuilder.icon("assets/bluemap/web/images/awepeeps/lodestone.svg", 16, 40);
+                            }
+                            markerSet.getMarkers().put(markerId, markerBuilder.build());
+                        })));
+    }
+
+    public List<BannerMarkerStorage.BannerMarkerData> removeMarkerAt(Block block) {
+        String worldName = block.getWorld().getName();
+        List<BannerMarkerStorage.BannerMarkerData> removed =
+                BlueMapCompass.instance.bannerMarkerStorage.removeMarkerByLocation(
+                        worldName, block.getX(), block.getY(), block.getZ());
+        if (removed.isEmpty()) return removed;
+
+        BlueMapAPI.getInstance().ifPresent(api ->
+                api.getWorld(block.getWorld().getUID()).ifPresent(world ->
+                        world.getMaps().forEach(map -> {
+                            MarkerSet markerSet = map.getMarkerSets().get(MARKER_SET_ID);
+                            if (markerSet != null) {
+                                removed.forEach(marker -> markerSet.getMarkers().remove(marker.markerId));
+                            }
+                        })));
+
+        for (BannerMarkerStorage.BannerMarkerData marker : removed) {
+            for (Player player : org.bukkit.Bukkit.getOnlinePlayers()) {
+                WaypointManager.removeWaypoint(player, marker.markerId);
             }
         }
+        return removed;
     }
 
     @EventHandler
-    public void onBannerBreak(BlockBreakEvent event) {
-        handleBannerRemove(event.getBlock(), "BlockBreakEvent");
+    public void onBlockBreak(BlockBreakEvent event) {
+        removeMarkerAt(event.getBlock());
     }
 
     @EventHandler
     public void onBlockExplode(BlockExplodeEvent event) {
-        for (Block block : event.blockList()) {
-            handleBannerRemove(block, "BlockExplodeEvent");
-        }
+        event.blockList().forEach(this::removeMarkerAt);
     }
 
     @EventHandler
     public void onEntityExplode(EntityExplodeEvent event) {
-        for (Block block : event.blockList()) {
-            handleBannerRemove(block, "EntityExplodeEvent");
-        }
+        event.blockList().forEach(this::removeMarkerAt);
     }
 
     @EventHandler
     public void onBlockBurn(BlockBurnEvent event) {
-        handleBannerRemove(event.getBlock(), "BlockBurnEvent");
+        removeMarkerAt(event.getBlock());
     }
 
     @EventHandler
     public void onBlockFromTo(BlockFromToEvent event) {
-        handleBannerRemove(event.getToBlock(), "BlockFromToEvent");
+        removeMarkerAt(event.getToBlock());
     }
 
     @EventHandler
     public void onBlockFade(BlockFadeEvent event) {
-        handleBannerRemove(event.getBlock(), "BlockFadeEvent");
+        removeMarkerAt(event.getBlock());
     }
 
     @EventHandler
     public void onBlockPistonExtend(BlockPistonExtendEvent event) {
-        for (Block block : event.getBlocks()) {
-            handleBannerRemove(block, "BlockPistonExtendEvent");
-        }
+        event.getBlocks().forEach(this::removeMarkerAt);
     }
 
     @EventHandler
     public void onBlockPistonRetract(BlockPistonRetractEvent event) {
-        for (Block block : event.getBlocks()) {
-            handleBannerRemove(block, "BlockPistonRetractEvent");
-        }
+        event.getBlocks().forEach(this::removeMarkerAt);
     }
 
-    // Call this on plugin enable to restore all markers
     public void restoreAllMarkers() {
         BlueMapAPI.onEnable(api -> {
-            for (BannerMarkerStorage.BannerMarkerData data : BlueMapCompass.instance.bannerMarkerStorage.getAllMarkers()) {
-                Location loc = data.getLocation();
-                if (loc == null) continue;
-                Vector3d pos = new Vector3d(loc.getX(), loc.getY(), loc.getZ());
-                Optional<BlueMapWorld> blueMapWorld = api.getWorld(loc.getWorld().getUID());
-                blueMapWorld.ifPresent(world -> {
-                    world.getMaps().forEach(map -> {
-                        MarkerSet markerSet = map.getMarkerSets().computeIfAbsent("banner-markers", k -> MarkerSet.builder().label("Banner Markers").build());
-                        String description = "<b>" + data.name + "</b><br>" +
-                                           "<b>Position:</b> " + data.x + ", " + data.y + ", " + data.z +
-                                           "<br><b>Owner:</b> " + (data.placerName != null && !data.placerName.isEmpty() ? data.placerName : data.placerUuid);
-                        String iconUrl = "assets/bluemap/web/images/banners/" + data.color.toLowerCase() + ".png";
-                        POIMarker marker = POIMarker.builder()
-                                .label(data.name)
-                                .position(pos)
-                                .detail(description)
-                                .icon(iconUrl, 32, 48)
-                                .maxDistance(100000)
-                                .build();
-                        markerSet.getMarkers().put(data.markerId, marker);
-                    });
-                });
+            for (BannerMarkerStorage.BannerMarkerData data
+                    : BlueMapCompass.instance.bannerMarkerStorage.getAllMarkers()) {
+                Location location = data.getLocation();
+                if (location == null) continue;
+                Optional<BlueMapWorld> blueMapWorld = api.getWorld(location.getWorld().getUID());
+                blueMapWorld.ifPresent(world -> world.getMaps().forEach(map -> {
+                    MarkerSet markerSet = map.getMarkerSets().computeIfAbsent(
+                            MARKER_SET_ID,
+                            key -> MarkerSet.builder().label("Awepeeps Waypoints").build());
+                    String owner = data.placerName == null || data.placerName.isEmpty()
+                            ? data.placerUuid : data.placerName;
+                    String detail = "<b>" + data.name + "</b><br>"
+                            + "<b>Position:</b> " + data.x + ", " + data.y + ", " + data.z
+                            + "<br><b>Owner:</b> " + owner;
+                    POIMarker.Builder markerBuilder = POIMarker.builder()
+                            .label(data.name)
+                            .position(new Vector3d(location.getX(), location.getY(), location.getZ()))
+                            .detail(detail)
+                            .maxDistance(100000);
+                    if ("banner".equalsIgnoreCase(data.type)) {
+                        String iconUrl = "assets/bluemap/web/images/banners/"
+                                + data.color.toLowerCase() + ".png";
+                        markerBuilder.icon(iconUrl, 12, 48);
+                    } else {
+                        markerBuilder.icon("assets/bluemap/web/images/awepeeps/lodestone.svg", 16, 40);
+                    }
+                    markerSet.getMarkers().put(data.markerId, markerBuilder.build());
+                }));
             }
         });
     }
-} 
+}
