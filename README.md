@@ -47,3 +47,9 @@ waypoints per page; use the previous/next arrows and page counter in the bottom
 row to navigate. Visibility and category controls are grouped on the left,
 bulk tracking is beside them, and page navigation and close are grouped on the
 right.
+
+## Repository docs
+
+- [AGENTS.md](AGENTS.md) — repository-wide rules for AI coding agents.
+- [.agents/skills/awepeeps-bluemap-compass-build-review/SKILL.md](.agents/skills/awepeeps-bluemap-compass-build-review/SKILL.md) — reproducible local build and review workflow.
+- [RELEASING.md](RELEASING.md) — release and hash-pinning steps.
