@@ -5,7 +5,7 @@ a jar with the same SHA-256, so the hash published by CI can be pinned with
 confidence.
 
 1. Bump `version` in `build.gradle` (and `CHANGELOG.md` if present), then open a
-   pull request against `master`.
+   pull request against `main`.
 2. Wait for the **Build** workflow to pass on the pull request, then merge it.
 3. Open the successful **Build** run for the merge commit and download the
    `awepeeps-bluemap-compass` artifact; copy the jar file name and its SHA-256
