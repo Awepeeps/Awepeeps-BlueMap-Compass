@@ -176,12 +176,17 @@ public class BlueMapIntegration {
      * be floored. A plain {@code (int)} cast truncates toward zero instead, which
      * moves a marker on a negative axis one block past its block (for example
      * {@code (int) -99.5 == -99} although the block is {@code -100}). flow-math's
-     * {@link Vector3d#floor()} floors each component and {@link Vector3d#toInt()}
-     * then returns those whole-block coordinates without any hand-written
-     * rounding, keeping the value unit-testable without a running server.
+     * {@link Vector3d#toInt()} performs that floor natively: it delegates to
+     * {@link Vector3i}'s {@code (double, double, double)} constructor, which floors
+     * each component exactly in double precision. Going through
+     * {@link Vector3d#floor()} first would be a regression above {@code |2^24|},
+     * where it narrows each component to {@code float} and can mis-round a
+     * coordinate that is still inside the vanilla world border; the direct
+     * conversion is both the minimal native call and exact at every magnitude, and
+     * stays unit-testable without a running server.
      */
     static Vector3i toBlockCoordinates(Vector3d position) {
-        return position.floor().toInt();
+        return position.toInt();
     }
 
     public static boolean teleportToMarker(Player player, MarkerData marker) {

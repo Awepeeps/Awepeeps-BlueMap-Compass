@@ -15,7 +15,11 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
  * {@code 0.5} on X and Z, as Spawn Kit does for the world-spawn marker), so the
  * block coordinate is the floor of each component. The previous implementation
  * cast each component directly, which truncates toward zero and shifted every
- * marker on a negative axis one block. The coordinate values here are synthetic.
+ * marker on a negative axis one block. The conversion uses flow-math's exact
+ * double-precision floor ({@link Vector3d#toInt()}) rather than
+ * {@link Vector3d#floor()}, whose {@code float} narrowing mis-rounds coordinates
+ * beyond {@code |2^24|} that are still reachable inside the vanilla world border.
+ * All coordinates here are synthetic.
  */
 class BlueMapIntegrationTest {
 
@@ -108,5 +112,67 @@ class BlueMapIntegrationTest {
 
         assertNotEquals(published, truncatedPillarCenter,
                 "the pre-fix (int) cast moved the pillar one block on a negative axis");
+    }
+
+    /**
+     * Asserts that both horizontal components floor exactly to {@code expected}
+     * and, as a sanity check on the expectation itself, that this matches the
+     * exact double floor.
+     */
+    private static void assertFloorsExactly(double component, int expected) {
+        Vector3i block = BlueMapIntegration.toBlockCoordinates(new Vector3d(component, 64.0, component));
+        assertEquals(expected, block.getX(), "floor of X at " + component);
+        assertEquals(expected, block.getZ(), "floor of Z at " + component);
+        assertEquals((int) Math.floor(component), expected, "expectation sanity at " + component);
+    }
+
+    @Test
+    void floorsExactlyBeyondFloatPrecisionOnBothSigns() {
+        // Vector3d#floor() narrows each component to float, so above 2^24 it
+        // cannot represent consecutive integers: 20,000,001.5 floored through
+        // float becomes 20,000,000. The direct native conversion stays exact.
+        assertFloorsExactly(20000001.5, 20000001);
+        assertFloorsExactly(-20000001.5, -20000002);
+    }
+
+    @Test
+    void floorsJustInsideAndAboveTwoToThe24() {
+        int boundary = 1 << 24; // 16,777,216
+        assertFloorsExactly(boundary - 0.5, boundary - 1);
+        assertFloorsExactly(boundary, boundary);
+        assertFloorsExactly(boundary + 0.5, boundary);
+        assertFloorsExactly(boundary + 1.5, boundary + 1);
+        assertFloorsExactly(-(boundary - 0.5), -boundary);
+        assertFloorsExactly(-boundary, -boundary);
+        assertFloorsExactly(-(boundary + 0.5), -(boundary + 1));
+        assertFloorsExactly(-(boundary + 1.5), -(boundary + 2));
+    }
+
+    @Test
+    void floorsAtVanillaWorldBorderExtremes() {
+        // The vanilla world border is +/-29,999,984 blocks; a block-center
+        // publisher emits block + 0.5, so these are reachable marker positions.
+        int border = 29999984;
+        assertFloorsExactly(border - 0.5, border - 1);
+        assertFloorsExactly(border, border);
+        assertFloorsExactly(border + 0.5, border);
+        assertFloorsExactly(-(border - 0.5), -border);
+        assertFloorsExactly(-border, -border);
+        assertFloorsExactly(-(border + 0.5), -(border + 1));
+    }
+
+    @Test
+    void floatNarrowingFloorChainWouldMisroundAtReachableCoordinates() {
+        // Documents the failure the direct conversion avoids: running the
+        // position through Vector3d#floor() first (the intermediate float)
+        // mis-rounds real, in-border marker positions on both signs.
+        Vector3d position = new Vector3d(20000001.5, 64.0, -29999984.5);
+
+        Vector3i direct = BlueMapIntegration.toBlockCoordinates(position);
+
+        assertEquals(20000001, direct.getX());
+        assertEquals(-29999985, direct.getZ());
+        assertNotEquals(direct, position.floor().toInt(),
+                "the float-narrowing floor chain mis-rounds here");
     }
 }
