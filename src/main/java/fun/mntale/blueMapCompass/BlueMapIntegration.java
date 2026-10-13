@@ -5,6 +5,8 @@ import de.bluecolored.bluemap.api.BlueMapMap;
 import de.bluecolored.bluemap.api.BlueMapWorld;
 import de.bluecolored.bluemap.api.markers.Marker;
 import de.bluecolored.bluemap.api.markers.MarkerSet;
+import com.flowpowered.math.vector.Vector3d;
+import com.flowpowered.math.vector.Vector3i;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -139,10 +141,13 @@ public class BlueMapIntegration {
                         int x = 0, y = 0, z = 0;
                         try {
                             var posMethod = marker.getClass().getMethod("getPosition");
-                            var pos = posMethod.invoke(marker);
-                            x = (int) ((com.flowpowered.math.vector.Vector3d) pos).getX();
-                            y = (int) ((com.flowpowered.math.vector.Vector3d) pos).getY();
-                            z = (int) ((com.flowpowered.math.vector.Vector3d) pos).getZ();
+                            Object pos = posMethod.invoke(marker);
+                            if (pos instanceof Vector3d position) {
+                                Vector3i block = toBlockCoordinates(position);
+                                x = block.getX();
+                                y = block.getY();
+                                z = block.getZ();
+                            }
                         } catch (Exception ignored) {}
                         markers.add(new MarkerData(
                             markerId,
@@ -160,6 +165,28 @@ public class BlueMapIntegration {
             }
         }
         return markers;
+    }
+
+    /**
+     * Converts a raw BlueMap marker position to the coordinates of the block it
+     * sits in.
+     *
+     * <p>Markers are published at block centers — Spawn Kit's world-spawn marker,
+     * for example, uses {@code block + 0.5} on X and Z — so every component has to
+     * be floored. A plain {@code (int)} cast truncates toward zero instead, which
+     * moves a marker on a negative axis one block past its block (for example
+     * {@code (int) -99.5 == -99} although the block is {@code -100}). flow-math's
+     * {@link Vector3d#toInt()} performs that floor natively: it delegates to
+     * {@link Vector3i}'s {@code (double, double, double)} constructor, which floors
+     * each component exactly in double precision. Going through
+     * {@link Vector3d#floor()} first would be a regression above {@code |2^24|},
+     * where it narrows each component to {@code float} and can mis-round a
+     * coordinate that is still inside the vanilla world border; the direct
+     * conversion is both the minimal native call and exact at every magnitude, and
+     * stays unit-testable without a running server.
+     */
+    static Vector3i toBlockCoordinates(Vector3d position) {
+        return position.toInt();
     }
 
     public static boolean teleportToMarker(Player player, MarkerData marker) {
