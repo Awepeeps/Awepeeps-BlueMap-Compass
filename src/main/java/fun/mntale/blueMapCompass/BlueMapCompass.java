@@ -49,6 +49,8 @@ public final class BlueMapCompass extends JavaPlugin implements Listener {
         getServer().getPluginManager().registerEvents(bannerMarkerListener, this);
         // Start global waypoint update task
         WaypointManager.startGlobalWaypointTask(this);
+        // Remove any display left over from an older build before players can see it
+        WaypointManager.removeStaleDisplays();
     }
 
     @Override
