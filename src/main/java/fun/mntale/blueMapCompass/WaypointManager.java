@@ -6,7 +6,6 @@ import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.entity.BlockDisplay;
 import org.bukkit.entity.Display;
-import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.util.Vector;
@@ -29,6 +28,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Consumer;
 import org.bukkit.scheduler.BukkitTask;
 
 public class WaypointManager {
@@ -144,6 +144,45 @@ public class WaypointManager {
             .findFirst().orElse(null);
     }
 
+    /**
+     * Spawns a per-player display entity hidden from every client by default.
+     * The configuration consumer runs inside the {@link World#spawn(Location, Class, Consumer)}
+     * callback, so it (including {@link Entity#setVisibleByDefault(boolean)}) is
+     * applied before the entity is added to the world and before any client can
+     * be sent it. The caller must reveal it to its owner with
+     * {@link Player#showEntity(org.bukkit.plugin.Plugin, Entity)}.
+     */
+    static <T extends Entity> T spawnHidden(World world, Location location, Class<T> type, Consumer<T> configure) {
+        return world.spawn(location, type, entity -> {
+            entity.setVisibleByDefault(false);
+            configure.accept(entity);
+        });
+    }
+
+    /**
+     * Removes any plugin-owned display entity still present in loaded chunks.
+     * Displays are non-persistent, so this is only a safety net for stale state
+     * that outlives a plugin reload: displays spawned by an older version were
+     * visible to every client, and a reload does not clear already-loaded
+     * entities.
+     */
+    public static void removeStaleDisplays() {
+        BlueMapCompass.foliaLib.getScheduler().runNextTick(task -> {
+            for (World world : Bukkit.getWorlds()) {
+                removeStaleDisplaysOfType(world, BlockDisplay.class);
+                removeStaleDisplaysOfType(world, TextDisplay.class);
+            }
+        });
+    }
+
+    private static <T extends Entity> void removeStaleDisplaysOfType(World world, Class<T> type) {
+        for (T entity : world.getEntitiesByClass(type)) {
+            if (entity.getPersistentDataContainer().has(DISPLAY_PLAYER_KEY, PersistentDataType.STRING)) {
+                BlueMapCompass.foliaLib.getScheduler().runAtEntity(entity, removeTask -> entity.remove());
+            }
+        }
+    }
+
     private static void updateOrSpawnWaypoint(Player player, MarkerData marker, JavaPlugin plugin) {
         // Recalculate world/target
         String worldName = marker.world();
@@ -177,38 +216,43 @@ public class WaypointManager {
                 // Spawn new BlockDisplay and TextDisplay using FoliaLib scheduler at player entity
                 BlueMapCompass.foliaLib.getScheduler().runAtEntity(player, (spawnTask) -> {
                     Material spawnedBlockMaterial = getWaypointPillarMaterial(marker);
-                    BlockDisplay spawnedDisplay = (BlockDisplay) player.getWorld().spawnEntity(getBillboardLocation(player, target, 48), EntityType.BLOCK_DISPLAY);
-                    spawnedDisplay.setBlock(Bukkit.createBlockData(spawnedBlockMaterial));
-                    spawnedDisplay.setBrightness(new Display.Brightness(15, 15));
-                    Transformation spawnedT = spawnedDisplay.getTransformation();
-                    spawnedT.getScale().set(0.15f, (float) (500 - (-64)), 0.15f);
-                    spawnedDisplay.setTransformation(spawnedT);
-                    spawnedDisplay.setPersistent(false);
-                    spawnedDisplay.getPersistentDataContainer().set(DISPLAY_PLAYER_KEY, PersistentDataType.STRING, player.getUniqueId().toString());
-                    spawnedDisplay.getPersistentDataContainer().set(DISPLAY_MARKER_KEY, PersistentDataType.STRING, marker.id());
-                    spawnedDisplay.setTeleportDuration(0);
+                    // Spawn hidden-by-default so no client sees it before the owner is
+                    // shown it. The configuration consumer runs inside the spawn callback,
+                    // i.e. before the entity is added to the world.
+                    BlockDisplay spawnedDisplay = spawnHidden(player.getWorld(), getBillboardLocation(player, target, 48), BlockDisplay.class, display -> {
+                        display.setBlock(Bukkit.createBlockData(spawnedBlockMaterial));
+                        display.setBrightness(new Display.Brightness(15, 15));
+                        Transformation spawnedT = display.getTransformation();
+                        spawnedT.getScale().set(0.15f, (float) (500 - (-64)), 0.15f);
+                        display.setTransformation(spawnedT);
+                        display.setPersistent(false);
+                        display.getPersistentDataContainer().set(DISPLAY_PLAYER_KEY, PersistentDataType.STRING, player.getUniqueId().toString());
+                        display.getPersistentDataContainer().set(DISPLAY_MARKER_KEY, PersistentDataType.STRING, marker.id());
+                        display.setTeleportDuration(0);
+                    });
                     player.showEntity(plugin, spawnedDisplay);
                     waypoints.computeIfAbsent(player.getUniqueId(), k -> new ConcurrentHashMap<>()).put(marker.id(), spawnedDisplay);
                     
                     // Spawn new TextDisplay
                     Location spawnedTextLoc = getBillboardLocation(player, target, 48);
                     spawnedTextLoc.setY(player.getEyeLocation().getY() + getDeterministicYOffset(marker.id()));
-                    TextDisplay spawnedTextDisplay = (TextDisplay) player.getWorld().spawnEntity(spawnedTextLoc, EntityType.TEXT_DISPLAY);
-                    spawnedTextDisplay.setBillboard(Display.Billboard.CENTER);
-                    spawnedTextDisplay.setSeeThrough(true);
-                    spawnedTextDisplay.setPersistent(false);
-                    spawnedTextDisplay.setTeleportDuration(0);
-                    spawnedTextDisplay.setViewRange(128);
-                    spawnedTextDisplay.setBrightness(new Display.Brightness(15, 15));
-                    double spawnedInitialDist = player.getLocation().distance(target);
-                    float spawnedInitialScale = (float)Math.min(8.0, Math.max(1.0, spawnedInitialDist/24.0));
-                    spawnedTextDisplay.setTransformation(new Transformation(spawnedTextDisplay.getTransformation().getTranslation(), new org.joml.Quaternionf(), new org.joml.Vector3f(spawnedInitialScale, spawnedInitialScale, spawnedInitialScale), new org.joml.Quaternionf()));
-                    spawnedTextDisplay.getPersistentDataContainer().set(DISPLAY_PLAYER_KEY, PersistentDataType.STRING, player.getUniqueId().toString());
-                    spawnedTextDisplay.getPersistentDataContainer().set(DISPLAY_MARKER_KEY, PersistentDataType.STRING, marker.id());
-                    TextColor spawnedInitialColor = getWaypointTextColor(marker.type(), marker.color());
-                    double spawnedDist = player.getLocation().distance(target);
-                    Component spawnedText = Component.text(marker.name() + " (" + Math.round(spawnedDist) + "m)", spawnedInitialColor);
-                    spawnedTextDisplay.text(spawnedText);
+                    TextDisplay spawnedTextDisplay = spawnHidden(player.getWorld(), spawnedTextLoc, TextDisplay.class, textDisplay -> {
+                        textDisplay.setBillboard(Display.Billboard.CENTER);
+                        textDisplay.setSeeThrough(true);
+                        textDisplay.setPersistent(false);
+                        textDisplay.setTeleportDuration(0);
+                        textDisplay.setViewRange(128);
+                        textDisplay.setBrightness(new Display.Brightness(15, 15));
+                        double spawnedInitialDist = player.getLocation().distance(target);
+                        float spawnedInitialScale = (float)Math.min(8.0, Math.max(1.0, spawnedInitialDist/24.0));
+                        textDisplay.setTransformation(new Transformation(textDisplay.getTransformation().getTranslation(), new org.joml.Quaternionf(), new org.joml.Vector3f(spawnedInitialScale, spawnedInitialScale, spawnedInitialScale), new org.joml.Quaternionf()));
+                        textDisplay.getPersistentDataContainer().set(DISPLAY_PLAYER_KEY, PersistentDataType.STRING, player.getUniqueId().toString());
+                        textDisplay.getPersistentDataContainer().set(DISPLAY_MARKER_KEY, PersistentDataType.STRING, marker.id());
+                        TextColor spawnedInitialColor = getWaypointTextColor(marker.type(), marker.color());
+                        double spawnedDist = player.getLocation().distance(target);
+                        Component spawnedText = Component.text(marker.name() + " (" + Math.round(spawnedDist) + "m)", spawnedInitialColor);
+                        textDisplay.text(spawnedText);
+                    });
                     player.showEntity(plugin, spawnedTextDisplay);
                     textDisplays.computeIfAbsent(player.getUniqueId(), k -> new ConcurrentHashMap<>()).put(marker.id(), spawnedTextDisplay);
                     updateWaypointDisplays(player, target, marker.name(), marker.type(), marker.id(), spawnedDisplay, spawnedTextDisplay, marker.color());

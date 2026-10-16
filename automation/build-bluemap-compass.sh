@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-VERSION="1.4.1-awepeeps.9"
+VERSION="1.4.1-awepeeps.10"
 IMAGE="gradle:9.1.0-jdk25@sha256:0a0fe3f8fb6e4ddd7ecf3f4d53b6f3f758add80e868bb95d72e3bbff420c1f68"
 BUILD_DIR="$(mktemp -d "${TMPDIR:-/tmp}/awepeeps-bluemap-compass.XXXXXX")"
 GRADLE_CACHE="${GRADLE_USER_HOME:-$HOME/.gradle}"

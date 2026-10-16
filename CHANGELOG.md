@@ -4,6 +4,19 @@ Notable changes to this fork. Versions use the fork's
 `<upstream>-awepeeps.<n>` scheme; the deployment repository pins an exact commit
 and artifact hash per release.
 
+## 1.4.1-awepeeps.10
+
+- Fix waypoint displays leaking to nearby players. Each tracked marker's beam
+  (`BlockDisplay`) and label (`TextDisplay`) were created with
+  `World#spawnEntity`, which sends the entity to every client before the plugin
+  could hide it, so the follow-up `Player#showEntity` for the owner had nothing
+  left to do and every nearby player saw the waypoint. Both displays are now
+  spawned hidden by default through `World#spawn(Location, Class, Consumer)`
+  and fully configured inside the spawn callback, before the entity is added to
+  the world, so it is never visible to anyone except the player it is then shown
+  to. A startup sweep also removes any plugin-tagged display left over from an
+  older build.
+
 ## 1.4.1-awepeeps.9
 
 - Fix marker coordinates imported from BlueMap on negative axes. Imported marker
