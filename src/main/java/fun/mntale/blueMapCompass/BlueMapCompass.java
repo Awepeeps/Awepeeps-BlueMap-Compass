@@ -117,6 +117,13 @@ public final class BlueMapCompass extends JavaPlugin implements Listener {
     }
 
     @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        // Without this, a player who logs off with waypoints showing leaves the
+        // displays in the world until the next restart or their next join.
+        WaypointManager.onPlayerQuit(event.getPlayer());
+    }
+
+    @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
         Set<String> tracked = fun.mntale.blueMapCompass.WaypointManager.getTrackedMarkers(player);
