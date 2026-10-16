@@ -4,6 +4,13 @@ Notable changes to this fork. Versions use the fork's
 `<upstream>-awepeeps.<n>` scheme; the deployment repository pins an exact commit
 and artifact hash per release.
 
+## 1.4.1-awepeeps.11
+
+- Remove a player's waypoint beam and label displays when they log off. There
+  was a join-time cleanup but no quit handler, so displays stayed in the world
+  until the next restart or the player's next join. The tracked set is kept, so
+  the waypoints come back on the next join.
+
 ## 1.4.1-awepeeps.10
 
 - Fix waypoint displays leaking to nearby players. Each tracked marker's beam

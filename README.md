@@ -28,7 +28,7 @@ Lodestone waypoint pillars and labels use a warm amber/gold accent; the BlueMap
 lodestone icon uses a matching shaded gold lens. Banner waypoints keep their
 banner-color pillar and label.
 
-The output is `build/libs/awepeeps-bluemap-compass-1.4.1-awepeeps.10.jar`.
+The output is `build/libs/awepeeps-bluemap-compass-1.4.1-awepeeps.11.jar`.
 
 ## Basic in-game acceptance
 

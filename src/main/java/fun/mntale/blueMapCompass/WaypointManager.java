@@ -123,6 +123,14 @@ public class WaypointManager {
         }
     }
 
+    /**
+     * Removes the player's beam and label displays when they leave. The tracked
+     * set is kept, so the global task restores the waypoints on their next join.
+     */
+    public static void onPlayerQuit(Player player) {
+        removeAllDisplays(player);
+    }
+
     private static void removeAllDisplays(Player player) {
         Set<String> displayed = new HashSet<>();
         Map<String, BlockDisplay> playerDisplays = waypoints.get(player.getUniqueId());
