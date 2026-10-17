@@ -3,7 +3,10 @@
 Scope: this file applies to **every file in this repository**. Human overview: [README.md](README.md).
 Repeatable local build/review: [.agents/skills/awepeeps-bluemap-compass-build-review/SKILL.md](.agents/skills/awepeeps-bluemap-compass-build-review/SKILL.md).
 
-This is a maintained fork of MidnightTale/BlueMap-Compass. Keep the upstream attribution and license.
+This is a maintained fork of MidnightTale/BlueMap-Compass. Keep the upstream
+attribution. The upstream project publishes **no license** (see the
+[License note](README.md#license) in the README), so this fork cannot grant one;
+do not add a `LICENSE` file here.
 
 ## Purpose and layout
 
@@ -11,6 +14,7 @@ This is a maintained fork of MidnightTale/BlueMap-Compass. Keep the upstream att
 - Java sources: `src/main/java/fun/mntale/blueMapCompass/`; unit tests: `src/test/java/fun/mntale/blueMapCompass/`.
 - Runtime resources: `src/main/resources/` — `paper-plugin.yml`, `config.yml`, `lodestone-waypoint.svg`.
 - Reproducible build helper: `automation/build-bluemap-compass.sh`. Release flow: [RELEASING.md](RELEASING.md).
+- Security policy: [SECURITY.md](SECURITY.md). Contribution guide: [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Build and test
 
