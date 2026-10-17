@@ -273,6 +273,23 @@ public class MarkerGUI implements Listener {
                 List.of(MM.deserialize("<gray>Click to switch waypoint visibility.")));
     }
 
+    /**
+     * Debounces clicks that toggle waypoint tracking, so a duplicate
+     * interaction from a Bedrock client cannot immediately toggle it back.
+     * The click is already cancelled by the caller, so a dropped duplicate has
+     * no vanilla side effect and is silent for the player.
+     */
+    private static boolean allowTrackingToggle(Player player) {
+        InteractionCooldown cooldown =
+                BlueMapCompass.instance != null ? BlueMapCompass.instance.interactionCooldown : null;
+        if (cooldown == null) return true;
+        if (cooldown.tryAcquire(player.getUniqueId(), InteractionCooldown.Action.MARKER)) return true;
+        if (fun.mntale.blueMapCompass.BlueMapCompass.debug) {
+            Bukkit.getLogger().info("[BlueMapCompass] Ignored duplicate tracking toggle from " + player.getName());
+        }
+        return false;
+    }
+
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
@@ -295,6 +312,7 @@ public class MarkerGUI implements Listener {
             return;
         }
         if (event.getSlot() == SLOT_TRACK_TOGGLE) {
+            if (!allowTrackingToggle(player)) return;
             Set<String> tracked = WaypointManager.getTrackedMarkers(player);
             boolean allTracked = !markers.isEmpty()
                     && markers.stream().allMatch(marker -> tracked.contains(marker.id()));
@@ -358,6 +376,7 @@ public class MarkerGUI implements Listener {
                     return;
                 }
                 Set<String> tracked = WaypointManager.getTrackedMarkers(player);
+                if (!allowTrackingToggle(player)) return;
                 if (tracked.contains(markerId)) {
                     WaypointManager.removeWaypoint(player, markerId);
                     player.sendMessage(MM.deserialize("<gray>Waypoint untracked."));

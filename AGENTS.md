@@ -16,7 +16,7 @@ This is a maintained fork of MidnightTale/BlueMap-Compass. Keep the upstream att
 
 - Build and test: `./gradlew --no-daemon clean test build` (Gradle wrapper 9.1.0, JDK 25).
 - Reproducible containerized build: `bash automation/build-bluemap-compass.sh`.
-- Output jar: `build/libs/awepeeps-bluemap-compass-1.4.1-awepeeps.11.jar`.
+- Output jar: `build/libs/awepeeps-bluemap-compass-1.4.1-awepeeps.12.jar`.
 - Open changes as a pull request against `main`; CI rebuilds twice and compares the jar bytes.
 
 ## Native defaults

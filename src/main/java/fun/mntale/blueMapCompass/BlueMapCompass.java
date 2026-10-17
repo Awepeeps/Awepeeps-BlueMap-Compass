@@ -28,6 +28,7 @@ public final class BlueMapCompass extends JavaPlugin implements Listener {
     public BannerMarkerStorage bannerMarkerStorage;
     public BannerMarkerListener bannerMarkerListener;
     public MarkerGUI markerGUI;
+    public InteractionCooldown interactionCooldown;
     public static boolean debug = false;
 
     @Override
@@ -39,6 +40,7 @@ public final class BlueMapCompass extends JavaPlugin implements Listener {
             saveConfig();
         }
         foliaLib = new FoliaLib(this);
+        interactionCooldown = new InteractionCooldown(loadInteractionCooldownMs());
         BlueMapIntegration.initialize(instance);
         bannerMarkerStorage = new BannerMarkerStorage(this);
         bannerMarkerListener = new BannerMarkerListener();
@@ -75,9 +77,11 @@ public final class BlueMapCompass extends JavaPlugin implements Listener {
                 if (target == null) return;
                 event.setCancelled(true);
                 if (!isAllowedMarkerTarget(target)) {
+                    if (!allowInteraction(player, InteractionCooldown.Action.GUI, "menu open")) return;
                     MarkerGUI.openFor(player);
                     return;
                 }
+                if (!allowInteraction(player, InteractionCooldown.Action.MARKER, "waypoint toggle")) return;
                 List<BannerMarkerStorage.BannerMarkerData> removed =
                         bannerMarkerListener.removeMarkerAt(target);
                 if (!removed.isEmpty()) {
@@ -97,9 +101,45 @@ public final class BlueMapCompass extends JavaPlugin implements Listener {
             }
             if (event.getAction() == Action.RIGHT_CLICK_AIR) {
                 event.setCancelled(true);
+                if (!allowInteraction(player, InteractionCooldown.Action.GUI, "menu open")) return;
                 MarkerGUI.openFor(player);
             }
         }
+    }
+
+    /**
+     * Applies the per-player interaction debounce. A duplicate inside the window
+     * is dropped silently for the player, optionally logged when the debug flag
+     * is on.
+     *
+     * @return {@code true} when the caller may proceed with the action
+     */
+    private boolean allowInteraction(Player player, InteractionCooldown.Action action, String description) {
+        if (interactionCooldown.tryAcquire(player.getUniqueId(), action)) {
+            return true;
+        }
+        if (debug) {
+            getLogger().info("Ignored duplicate compass " + description + " from " + player.getName());
+        }
+        return false;
+    }
+
+    /**
+     * Reads {@code interaction-cooldown-ms}, falling back to the default and
+     * logging exactly one warning when the configured value is out of range.
+     */
+    private long loadInteractionCooldownMs() {
+        long configured = getConfig().getLong("interaction-cooldown-ms", InteractionCooldown.DEFAULT_COOLDOWN_MS);
+        if (configured < InteractionCooldown.MIN_COOLDOWN_MS || configured > InteractionCooldown.MAX_COOLDOWN_MS) {
+            getLogger().warning("interaction-cooldown-ms must be between "
+                    + InteractionCooldown.MIN_COOLDOWN_MS + " and " + InteractionCooldown.MAX_COOLDOWN_MS
+                    + " (got " + configured + "); using default "
+                    + InteractionCooldown.DEFAULT_COOLDOWN_MS + ".");
+            getConfig().set("interaction-cooldown-ms", InteractionCooldown.DEFAULT_COOLDOWN_MS);
+            saveConfig();
+            return InteractionCooldown.DEFAULT_COOLDOWN_MS;
+        }
+        return configured;
     }
 
     public static boolean isCompass(ItemStack item) {
@@ -121,6 +161,7 @@ public final class BlueMapCompass extends JavaPlugin implements Listener {
         // Without this, a player who logs off with waypoints showing leaves the
         // displays in the world until the next restart or their next join.
         WaypointManager.onPlayerQuit(event.getPlayer());
+        interactionCooldown.clear(event.getPlayer().getUniqueId());
     }
 
     @EventHandler
