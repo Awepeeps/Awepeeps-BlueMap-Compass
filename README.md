@@ -7,18 +7,43 @@ Sneak-right-click a lodestone or banner with any compass (ordinary, lodestone, o
 ## Requirements
 
 - Paper 26.3 (build 175) and Java 25
-- BlueMap with its API available
+- BlueMap — a hard dependency: the plugin will not enable without it
 - `bluemapcompass.use` (default: true)
 
-`plugins/AwepeepsBlueMapCompass/config.yml` controls marker placement. By default,
-only lodestones and banners are allowed. Waypoint indicators are limited to 50 blocks by default:
+## Install
 
-```yaml
-marker-targets:
-  - LODESTONE
-  - BANNER
-max-waypoint-distance: 50
-```
+1. Drop the built jar (see [Build](#build) for the output path) into the server's
+   `plugins/` directory.
+2. Install and run BlueMap alongside the server; the plugin requires it and will
+   not enable without it.
+3. Start the server. On first run the plugin creates
+   `plugins/AwepeepsBlueMapCompass/config.yml`; edit it as desired and restart.
+
+## Configuration
+
+`plugins/AwepeepsBlueMapCompass/config.yml` controls marker placement and
+interaction pacing. Every key, with its shipped default:
+
+| Key | Default | Meaning |
+| --- | --- | --- |
+| `marker-targets` | `LODESTONE`, `BANNER` | Block types you may sneak-right-click with a compass to create or remove a waypoint. |
+| `max-waypoint-distance` | `50` | Maximum distance, in blocks, at which the in-game waypoint indicator is drawn while a compass is held. |
+| `interaction-cooldown-ms` | `750` | Per-player debounce, in milliseconds, applied to every compass action: creating, toggling, or removing a waypoint or marker, opening the waypoint menu, and toggling tracking inside that menu. A repeat of the same action inside this window is ignored, which absorbs the duplicate interaction events Bedrock/Geyser clients send for a single press. Actions are tracked in two independent buckets (marker create/toggle/remove and menu open), so opening the menu right after placing a marker still works. `0` disables the debounce; values outside `0-5000` fall back to the default. |
+
+## Waypoint behaviour
+
+- **Per-player visibility.** A tracked waypoint's in-game indicator (its beam
+  and label displays) is spawned hidden and configured inside the spawn
+  callback, so it is never visible to any player other than the one it is shown
+  to — nearby players never see someone else's waypoint indicators. A startup
+  sweep also removes any plugin-tagged display left behind by an older build.
+- **Removal on logout.** A player's indicator displays are removed when they
+  log off; the join-time cleanup alone left displays in the world until the
+  next restart. The tracked set is kept, so the indicators come back on the
+  player's next join.
+- **Interaction cooldown.** `interaction-cooldown-ms` (see above) debounces
+  repeated compass actions per player, including the in-menu tracking toggle,
+  and the cooldown state is cleared when the player quits.
 
 ## Build
 
@@ -29,6 +54,14 @@ lodestone icon uses a matching shaded gold lens. Banner waypoints keep their
 banner-color pillar and label.
 
 The output is `build/libs/awepeeps-bluemap-compass-1.4.1-awepeeps.12.jar`.
+
+## Rollback
+
+To roll back a Compass deployment: stop the server cleanly, restore the
+previously reviewed jar (from the same verified backup, together with the
+matching `plugins/AwepeepsBlueMapCompass/` data directory), revert the pin —
+the source commit and jar SHA-256 — in the private deployment repository, and
+start the server again.
 
 ## Basic in-game acceptance
 
@@ -48,8 +81,19 @@ row to navigate. Visibility and category controls are grouped on the left,
 bulk tracking is beside them, and page navigation and close are grouped on the
 right.
 
+## License
+
+The upstream [MidnightTale/BlueMap-Compass](https://github.com/MidnightTale/BlueMap-Compass)
+project publishes **no license**. This fork therefore cannot grant one for the
+upstream code it is based on: the changes made in this fork are shared here for
+reference only. For reuse terms, contact the upstream project. This repository
+intentionally has no `LICENSE` file.
+
 ## Repository docs
 
 - [AGENTS.md](AGENTS.md) — repository-wide rules for AI coding agents.
 - [.agents/skills/awepeeps-bluemap-compass-build-review/SKILL.md](.agents/skills/awepeeps-bluemap-compass-build-review/SKILL.md) — reproducible local build and review workflow.
 - [RELEASING.md](RELEASING.md) — release and hash-pinning steps.
+- [CHANGELOG.md](CHANGELOG.md) — version history of this fork.
+- [SECURITY.md](SECURITY.md) — how to report a security issue privately.
+- [CONTRIBUTING.md](CONTRIBUTING.md) — build/test steps and pull-request expectations.
