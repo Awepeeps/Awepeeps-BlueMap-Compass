@@ -4,6 +4,18 @@ Notable changes to this fork. Versions use the fork's
 `<upstream>-awepeeps.<n>` scheme; the deployment repository pins an exact commit
 and artifact hash per release.
 
+## 1.4.1-awepeeps.12
+
+- Debounce compass interactions per player. Bedrock clients (Switch and friends,
+  through Geyser/Floodgate) easily double-trigger a single press, and can even
+  send two different interaction events for one press, so a waypoint was created
+  and immediately removed again. The new `interaction-cooldown-ms` config key
+  (default 750, 0 disables) drops a repeat of the same action within the window
+  and, when it does, the interaction is cancelled so no vanilla side effect
+  happens either. Two independent buckets are kept: marker create/toggle/remove
+  and menu open, so opening the menu right after placing a marker still works.
+  The same debounce covers the in-menu tracking toggle. State is cleared on quit.
+
 ## 1.4.1-awepeeps.11
 
 - Remove a player's waypoint beam and label displays when they log off. There
